@@ -16,7 +16,9 @@ export async function submitApplication(formData: FormData) {
     .eq('user_id', user.id)
     .single();
 
-  if (!applicantProfile) return { error: 'Complete your profile before applying.' };
+  if (!applicantProfile) {
+    redirect('/dashboard/applicant/profile?notice=Complete+your+profile+before+applying');
+  }
 
   const { data: application, error } = await supabase
     .from('applications')
@@ -24,7 +26,9 @@ export async function submitApplication(formData: FormData) {
     .select('id')
     .single();
 
-  if (error || !application) return { error: error?.message || 'Could not submit application.' };
+  if (error || !application) {
+    redirect(`/dashboard/applicant/apply/${jobId}?error=Could+not+submit+application`);
+  }
 
   const { data: questions } = await supabase
     .from('screening_questions')
