@@ -1,11 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { signup } from '@/app/actions';
 
-export default function SignupPage() {
+function SignupForm() {
   const searchParams = useSearchParams();
   const [role, setRole] = useState(searchParams.get('role') === 'applicant' ? 'applicant' : 'company');
   const [error, setError] = useState('');
@@ -58,5 +58,13 @@ export default function SignupPage() {
         Already have an account? <Link href="/login" style={{ color: 'var(--gold)', fontWeight: 600 }}>Sign in</Link>
       </p>
     </div>
+  );
+}
+
+export default function SignupPage() {
+  return (
+    <Suspense fallback={null}>
+      <SignupForm />
+    </Suspense>
   );
 }
