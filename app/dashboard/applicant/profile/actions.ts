@@ -33,6 +33,9 @@ export async function saveApplicantProfile(formData: FormData) {
     .update(update)
     .eq('user_id', user.id);
 
-  if (error) return { error: error.message };
+  if (error) {
+    console.error('saveApplicantProfile failed:', error);
+    return { error: 'Something went wrong saving your profile — please try again.' };
+  }
   return { success: true };
 }
