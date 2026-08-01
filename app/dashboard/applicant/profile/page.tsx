@@ -27,7 +27,11 @@ const COMMON_SKILLS = [
 ];
 
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-const SHIFTS = ['Morning', 'Afternoon', 'Evening', 'Overnight', 'Flexible'];
+const HOURS = Array.from({ length: 24 }, (_, i) => {
+  const h = i % 12 === 0 ? 12 : i % 12;
+  const ampm = i < 12 ? 'AM' : 'PM';
+  return { value: String(i), label: `${h}:00 ${ampm}` };
+});
 
 export default function ApplicantProfilePage() {
   const supabase = createClient();
@@ -36,7 +40,8 @@ export default function ApplicantProfilePage() {
   const [skillsList, setSkillsList] = useState<string[]>([]);
   const [customSkill, setCustomSkill] = useState('');
   const [availDays, setAvailDays] = useState<string[]>([]);
-  const [availShift, setAvailShift] = useState('Flexible');
+  const [availFrom, setAvailFrom] = useState('9');
+  const [availTo, setAvailTo] = useState('17');
   const [salaryRange, setSalaryRange] = useState('');
   const [parsing, setParsing] = useState(false);
   const [reviewing, setReviewing] = useState(false);
@@ -59,7 +64,12 @@ export default function ApplicantProfilePage() {
         if (data.availability) {
           const parts = String(data.availability).split(' · ');
           if (parts[0]) setAvailDays(parts[0].split(', ').filter(Boolean));
-          if (parts[1]) setAvailShift(parts[1].replace(' shifts', ''));
+          const hourMatch = parts[1]?.match(/^(\d{1,2}):00 (AM|PM) – (\d{1,2}):00 (AM|PM)$/);
+          if (hourMatch) {
+            const to24 = (h: string, ampm: string) => (ampm === 'PM' && h !== '12' ? Number(h) + 12 : ampm === 'AM' && h === '12' ? 0 : Number(h));
+            setAvailFrom(String(to24(hourMatch[1], hourMatch[2])));
+            setAvailTo(String(to24(hourMatch[3], hourMatch[4])));
+          }
         }
       }
       setLoaded(true);
@@ -147,6 +157,12 @@ export default function ApplicantProfilePage() {
     }
   }
 
+  function formatHour(h: string) {
+    const n = Number(h);
+    const hr = n % 12 === 0 ? 12 : n % 12;
+    return `${hr}:00 ${n < 12 ? 'AM' : 'PM'}`;
+  }
+
   async function handleSave(formData: FormData) {
     setSaving(true);
     formData.set('parsedExperience', JSON.stringify(profile.parsed_experience || []));
@@ -154,12 +170,32 @@ export default function ApplicantProfilePage() {
     formData.set('parsedCertifications', JSON.stringify(profile.parsed_certifications || []));
     formData.set('skills', skillsList.join(', '));
     formData.set('desiredSalary', salaryRange);
-    formData.set('availability', availDays.length ? `${availDays.join(', ')} · ${availShift} shifts` : `${availShift} shifts`);
+    formData.set('availability', `${availDays.join(', ')} · ${formatHour(availFrom)} – ${formatHour(availTo)}`);
     formData.set('resumeUrl', profile.resume_url || '');
     const result = await saveApplicantProfile(formData);
+
+    if (result.error) {
+      setSaving(false);
+      setMessage(result.error);
+      setMessageIsError(true);
+      return;
+    }
+
+    // Don't just trust the save succeeded — re-fetch from the database and
+    // confirm the data is actually there before telling the user it's saved.
+    const { data: { user } } = await supabase.auth.getUser();
+    const { data: fresh, error: refetchError } = await supabase
+      .from('applicant_profiles').select('*').eq('user_id', user!.id).single();
     setSaving(false);
-    setMessage(result.error ? result.error : 'Profile saved.');
-    setMessageIsError(!!result.error);
+
+    if (refetchError || !fresh || fresh.full_name !== String(formData.get('fullName') || '')) {
+      setMessage('The save did not go through as expected — please try again, and let support know if this keeps happening.');
+      setMessageIsError(true);
+      return;
+    }
+    setProfile(fresh);
+    setMessage(`Profile saved and confirmed (verified at ${new Date().toLocaleTimeString()}).`);
+    setMessageIsError(false);
   }
 
   if (!loaded) return <div className="container">Loading…</div>;
@@ -247,9 +283,16 @@ export default function ApplicantProfilePage() {
             </span>
           ))}
         </div>
-        <select value={availShift} onChange={(e) => setAvailShift(e.target.value)}>
-          {SHIFTS.map((s) => <option key={s} value={s}>{s}</option>)}
-        </select>
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+          <select value={availFrom} onChange={(e) => setAvailFrom(e.target.value)}>
+            {HOURS.map((h) => <option key={h.value} value={h.value}>{h.label}</option>)}
+          </select>
+          <span style={{ color: 'var(--slate)' }}>to</span>
+          <select value={availTo} onChange={(e) => setAvailTo(e.target.value)}>
+            {HOURS.map((h) => <option key={h.value} value={h.value}>{h.label}</option>)}
+          </select>
+        </div>
+        <p style={{ fontSize: 12, color: 'var(--slate)', margin: '4px 0 0' }}>Your general availability — if a specific job requires set hours, that job's posting will say so.</p>
 
         <label>Portfolio / website</label>
         <input name="portfolioUrl" defaultValue={profile.portfolio_url} />
