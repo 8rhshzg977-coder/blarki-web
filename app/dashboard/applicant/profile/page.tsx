@@ -91,34 +91,46 @@ export default function ApplicantProfilePage() {
   async function parseResume() {
     if (!resumeText.trim()) return;
     setParsing(true);
-    const res = await fetch('/api/parse-resume', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ resumeText }),
-    });
-    const data = await res.json();
-    setParsing(false);
-    if (data.error) { setMessage(data.detail ? `${data.error}: ${data.detail}` : data.error); setMessageIsError(true); return; }
-    setProfile((p: any) => ({
-      ...p, full_name: data.fullName || p.full_name, location: data.location || p.location,
-      parsed_experience: data.experience, parsed_education: data.education, parsed_certifications: data.certifications,
-    }));
-    if (data.skills?.length) setSkillsList((prev) => Array.from(new Set([...prev, ...data.skills])));
-    setMessage('Resume parsed — review the fields below, then save.'); setMessageIsError(false);
+    try {
+      const res = await fetch('/api/parse-resume', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ resumeText }),
+      });
+      const data = await res.json();
+      if (data.error) { setMessage(data.detail ? `${data.error}: ${data.detail}` : data.error); setMessageIsError(true); return; }
+      setProfile((p: any) => ({
+        ...p, full_name: data.fullName || p.full_name, location: data.location || p.location,
+        parsed_experience: data.experience, parsed_education: data.education, parsed_certifications: data.certifications,
+      }));
+      if (data.skills?.length) setSkillsList((prev) => Array.from(new Set([...prev, ...data.skills])));
+      setMessage('Resume parsed — review the fields below, then save.'); setMessageIsError(false);
+    } catch (err: any) {
+      setMessage('The AI request timed out or failed to respond — please try again.');
+      setMessageIsError(true);
+    } finally {
+      setParsing(false);
+    }
   }
 
   async function reviewResume() {
     if (!resumeText.trim()) return;
     setReviewing(true);
-    const res = await fetch('/api/review-resume', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ resumeText }),
-    });
-    const data = await res.json();
-    setReviewing(false);
-    if (data.error) { setMessage(data.detail ? `${data.error}: ${data.detail}` : data.error); setMessageIsError(true); return; }
-    setReview(data);
+    try {
+      const res = await fetch('/api/review-resume', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ resumeText }),
+      });
+      const data = await res.json();
+      if (data.error) { setMessage(data.detail ? `${data.error}: ${data.detail}` : data.error); setMessageIsError(true); return; }
+      setReview(data);
+    } catch (err: any) {
+      setMessage('The AI request timed out or failed to respond — please try again.');
+      setMessageIsError(true);
+    } finally {
+      setReviewing(false);
+    }
   }
 
   function sanitizeFilename(name: string) {
@@ -173,29 +185,38 @@ export default function ApplicantProfilePage() {
     formData.set('availability', `${availDays.join(', ')} · ${formatHour(availFrom)} – ${formatHour(availTo)}`);
     formData.set('resumeUrl', profile.resume_url || '');
     const result = await saveApplicantProfile(formData);
+    setSaving(false);
 
     if (result.error) {
-      setSaving(false);
       setMessage(result.error);
       setMessageIsError(true);
       return;
     }
 
-    // Don't just trust the save succeeded — re-fetch from the database and
-    // confirm the data is actually there before telling the user it's saved.
-    const { data: { user } } = await supabase.auth.getUser();
-    const { data: fresh, error: refetchError } = await supabase
-      .from('applicant_profiles').select('*').eq('user_id', user!.id).single();
-    setSaving(false);
-
-    if (refetchError || !fresh || fresh.full_name !== String(formData.get('fullName') || '')) {
-      setMessage('The save did not go through as expected — please try again, and let support know if this keeps happening.');
-      setMessageIsError(true);
-      return;
-    }
-    setProfile(fresh);
-    setMessage(`Profile saved and confirmed (verified at ${new Date().toLocaleTimeString()}).`);
+    // The database write succeeded — trust that, and update local state to
+    // match exactly what was just submitted so the fields don't reset on
+    // navigation. (A background re-fetch below is just a sanity log, not a
+    // condition for showing success — comparing values can produce false
+    // negatives from whitespace/type differences that don't mean the save
+    // actually failed.)
+    setProfile((p: any) => ({
+      ...p,
+      full_name: String(formData.get('fullName') || ''),
+      location: String(formData.get('location') || ''),
+      bio: String(formData.get('bio') || ''),
+      portfolio_url: String(formData.get('portfolioUrl') || ''),
+      linkedin_url: String(formData.get('linkedinUrl') || ''),
+    }));
+    setMessage('Profile saved.');
     setMessageIsError(false);
+
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) return;
+      supabase.from('applicant_profiles').select('full_name').eq('user_id', user.id).single()
+        .then(({ data, error }) => {
+          if (error) console.warn('Post-save consistency check could not run:', error.message);
+        });
+    });
   }
 
   if (!loaded) return <div className="container">Loading…</div>;

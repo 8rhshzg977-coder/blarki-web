@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { extractJson } from '@/lib/extractJson';
+
+export const maxDuration = 30; // give the Anthropic call room to finish instead of timing out silently
 
 const CATEGORY_GUIDANCE: Record<string, string> = {
   retail: 'Focus on customer service, POS/register accuracy, and reliability during peak hours.',
@@ -64,7 +67,7 @@ Return JSON exactly in this shape, nothing else:
 
     const data = await apiRes.json();
     const text = data.content.map((b: any) => (b.type === 'text' ? b.text : '')).join('');
-    const parsed = JSON.parse(text);
+    const parsed = extractJson(text);
     return NextResponse.json(parsed);
   } catch (err: any) {
     return NextResponse.json({ error: 'AI generation failed', detail: err.message }, { status: 500 });

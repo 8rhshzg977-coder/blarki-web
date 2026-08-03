@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { extractJson } from '@/lib/extractJson';
+
+export const maxDuration = 30; // give the Anthropic call room to finish instead of timing out silently
 
 // Accepts either { resumeText } (pasted text) or { resumeBase64, mediaType }
 // (an uploaded PDF) — Claude reads PDFs natively, so no separate text-extraction
@@ -54,7 +57,7 @@ If a field isn't present, use an empty string or empty array — never invent in
 
     const data = await apiRes.json();
     const text = data.content.map((b: any) => (b.type === 'text' ? b.text : '')).join('');
-    const parsed = JSON.parse(text);
+    const parsed = extractJson(text);
     return NextResponse.json(parsed);
   } catch (err: any) {
     return NextResponse.json({ error: 'AI parsing failed', detail: err.message }, { status: 500 });

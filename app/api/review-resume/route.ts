@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { extractJson } from '@/lib/extractJson';
+
+export const maxDuration = 30; // give the Anthropic call room to finish instead of timing out silently
 
 // General resume feedback, or job-tailored feedback when jobId is provided
 // (PRD: "Improve my resume for this job").
@@ -57,7 +60,7 @@ Base everything only on what's actually in the resume text (and the job descript
     }
     const data = await apiRes.json();
     const text = data.content.map((b: any) => (b.type === 'text' ? b.text : '')).join('');
-    return NextResponse.json(JSON.parse(text));
+    return NextResponse.json(extractJson(text));
   } catch (err: any) {
     return NextResponse.json({ error: 'AI review failed', detail: err.message }, { status: 500 });
   }
