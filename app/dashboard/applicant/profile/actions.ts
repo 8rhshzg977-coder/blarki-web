@@ -28,14 +28,19 @@ export async function saveApplicantProfile(formData: FormData) {
   if (parsedEducation) { try { update.parsed_education = JSON.parse(String(parsedEducation)); } catch {} }
   if (parsedCertifications) { try { update.parsed_certifications = JSON.parse(String(parsedCertifications)); } catch {} }
 
-  const { error } = await supabase
+  const { data: updated, error } = await supabase
     .from('applicant_profiles')
     .update(update)
-    .eq('user_id', user.id);
+    .eq('user_id', user.id)
+    .select();
 
   if (error) {
     console.error('saveApplicantProfile failed:', error);
     return { error: 'Something went wrong saving your profile — please try again.' };
+  }
+  if (!updated || updated.length === 0) {
+    console.error('saveApplicantProfile: update matched zero rows for user', user.id);
+    return { error: 'Your profile record could not be found to update — please contact support and mention "zero rows updated".' };
   }
   return { success: true };
 }
