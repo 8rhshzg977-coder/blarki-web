@@ -30,10 +30,10 @@ export async function saveApplicantProfile(formData: FormData) {
 
   // Self-heal: some accounts created during earlier setup issues may be
   // missing their base `profiles` row, which applicant_profiles depends on
-  // via foreign key. Ensure it exists before saving.
-  const { error: profileFixError } = await supabase
-    .from('profiles')
-    .upsert({ id: user.id, email: user.email, user_type: 'applicant' }, { onConflict: 'id' });
+  // via foreign key. This runs as a database function (RPC) rather than a
+  // direct table upsert, since the table-based path was hitting a
+  // persistent PostgREST schema-cache error that survived cache reloads.
+  const { error: profileFixError } = await supabase.rpc('ensure_profile_exists', { p_user_type: 'applicant' });
   if (profileFixError) {
     console.error('Could not repair missing profiles row:', profileFixError);
     return { error: `Save failed — could not verify your account record (${profileFixError.message})` };
