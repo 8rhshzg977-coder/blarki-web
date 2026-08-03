@@ -35,7 +35,7 @@ export async function saveApplicantProfile(formData: FormData) {
 
   if (error) {
     console.error('saveApplicantProfile failed:', error);
-    return { error: 'Something went wrong saving your profile — please try again.' };
+    return { error: `Save failed — ${error.message} (code: ${error.code || 'unknown'})` };
   }
   if (!updated || updated.length === 0) {
     console.error('saveApplicantProfile: upsert returned no row for user', user.id);
