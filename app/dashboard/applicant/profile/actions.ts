@@ -28,6 +28,17 @@ export async function saveApplicantProfile(formData: FormData) {
   if (parsedEducation) { try { update.parsed_education = JSON.parse(String(parsedEducation)); } catch {} }
   if (parsedCertifications) { try { update.parsed_certifications = JSON.parse(String(parsedCertifications)); } catch {} }
 
+  // Self-heal: some accounts created during earlier setup issues may be
+  // missing their base `profiles` row, which applicant_profiles depends on
+  // via foreign key. Ensure it exists before saving.
+  const { error: profileFixError } = await supabase
+    .from('profiles')
+    .upsert({ id: user.id, email: user.email, user_type: 'applicant' }, { onConflict: 'id' });
+  if (profileFixError) {
+    console.error('Could not repair missing profiles row:', profileFixError);
+    return { error: `Save failed — could not verify your account record (${profileFixError.message})` };
+  }
+
   const { data: updated, error } = await supabase
     .from('applicant_profiles')
     .upsert({ user_id: user.id, ...update }, { onConflict: 'user_id' })
