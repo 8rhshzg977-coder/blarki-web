@@ -30,8 +30,7 @@ export async function saveApplicantProfile(formData: FormData) {
 
   const { data: updated, error } = await supabase
     .from('applicant_profiles')
-    .update(update)
-    .eq('user_id', user.id)
+    .upsert({ user_id: user.id, ...update }, { onConflict: 'user_id' })
     .select();
 
   if (error) {
@@ -39,8 +38,8 @@ export async function saveApplicantProfile(formData: FormData) {
     return { error: 'Something went wrong saving your profile — please try again.' };
   }
   if (!updated || updated.length === 0) {
-    console.error('saveApplicantProfile: update matched zero rows for user', user.id);
-    return { error: 'Your profile record could not be found to update — please contact support and mention "zero rows updated".' };
+    console.error('saveApplicantProfile: upsert returned no row for user', user.id);
+    return { error: 'Your profile could not be saved — please contact support and mention "upsert returned no row".' };
   }
   return { success: true };
 }
