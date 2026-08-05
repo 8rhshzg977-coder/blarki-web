@@ -2,6 +2,9 @@
 
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
+import { scoreApplication } from '@/lib/scoreApplication';
+
+export const maxDuration = 30;
 
 export async function submitApplication(formData: FormData) {
   const supabase = createClient();
@@ -43,6 +46,15 @@ export async function submitApplication(formData: FormData) {
       answer_text: String(formData.get(`answer-${q.id}`) || ''),
     }));
     if (answerRows.length) await supabase.from('application_answers').insert(answerRows);
+  }
+
+  // Score before redirecting — Vercel can freeze the function immediately
+  // after the response is sent, which would silently kill a background
+  // call. A failed score shouldn't block the application itself, though.
+  try {
+    await scoreApplication(supabase, application.id);
+  } catch (err) {
+    console.error('Scoring failed (application still submitted):', err);
   }
 
   redirect('/dashboard/applicant');
