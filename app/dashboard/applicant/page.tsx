@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import { logout } from '@/app/actions';
+import { CATEGORIES } from '@/lib/categories';
 
 export default async function ApplicantDashboard({ searchParams }: { searchParams: { q?: string; category?: string } }) {
   const supabase = createClient();
@@ -25,7 +26,7 @@ export default async function ApplicantDashboard({ searchParams }: { searchParam
     .eq('applicant_id', (await supabase.from('applicant_profiles').select('id').eq('user_id', user.id).single()).data?.id);
 
   const appliedJobIds = new Set((myApplications || []).map((a) => a.job_id));
-  const categories = ['retail', 'restaurant', 'construction', 'engineering', 'it', 'healthcare', 'legal', 'finance', 'education'];
+  const categories = CATEGORIES;
 
   return (
     <div className="container">
@@ -44,7 +45,7 @@ export default async function ApplicantDashboard({ searchParams }: { searchParam
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 20 }}>
         <Link href="/dashboard/applicant" className="tagpill" style={{ padding: '6px 12px' }}>All</Link>
         {categories.map((c) => (
-          <Link key={c} href={`/dashboard/applicant?category=${c}`} className="tagpill" style={{ padding: '6px 12px' }}>{c}</Link>
+          <Link key={c.value} href={`/dashboard/applicant?category=${c.value}`} className="tagpill" style={{ padding: '6px 12px' }}>{c.label}</Link>
         ))}
       </div>
 
@@ -59,7 +60,7 @@ export default async function ApplicantDashboard({ searchParams }: { searchParam
               <div style={{ fontWeight: 600 }}>{job.title}</div>
               <div style={{ fontSize: 13, color: 'var(--slate)' }}>{job.location} · {job.pay_range || 'Pay not listed'}</div>
             </div>
-            <span className="tagpill">{job.category}</span>
+            <span className="tagpill">{CATEGORIES.find((c) => c.value === job.category)?.label || job.category}</span>
           </div>
           <p style={{ fontSize: 13, color: 'var(--ink-soft)', marginTop: 8 }}>{job.description?.slice(0, 180)}…</p>
           {appliedJobIds.has(job.id) ? (

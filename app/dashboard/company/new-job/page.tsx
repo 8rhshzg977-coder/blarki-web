@@ -2,8 +2,7 @@
 
 import { useState } from 'react';
 import { publishJob } from '@/app/dashboard/company/actions';
-
-const CATEGORIES = ['retail', 'restaurant', 'construction', 'engineering', 'it', 'healthcare', 'legal', 'finance', 'education'];
+import { CATEGORIES } from '@/lib/categories';
 
 export default function NewJobPage() {
   const [title, setTitle] = useState('');
@@ -57,7 +56,7 @@ export default function NewJobPage() {
           <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Civil Engineer" />
           <label>Category</label>
           <select value={category} onChange={(e) => setCategory(e.target.value)}>
-            {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+            {CATEGORIES.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
           </select>
           <label>Location</label>
           <input value={location} onChange={(e) => setLocation(e.target.value)} placeholder="e.g. Houston, TX" />

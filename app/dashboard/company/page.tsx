@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import { logout } from '@/app/actions';
 import { ensureCompanyMembership } from '@/lib/ensureCompanyMembership';
+import { CATEGORIES } from '@/lib/categories';
 
 export default async function CompanyDashboard() {
   const supabase = createClient();
@@ -93,7 +94,7 @@ export default async function CompanyDashboard() {
             <div style={{ fontWeight: 600 }}>{job.title}</div>
             <div style={{ fontSize: 13, color: 'var(--slate)' }}>{job.location} · {job.pay_range || 'Pay not listed'}</div>
             <div style={{ marginTop: 6, display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-              <span className="tagpill">{job.category}</span>
+              <span className="tagpill">{CATEGORIES.find((c) => c.value === job.category)?.label || job.category}</span>
               <span className="tagpill" style={{ background: job.status === 'open' ? 'var(--teal-soft)' : 'var(--rose-soft)', color: job.status === 'open' ? 'var(--teal)' : 'var(--rose)' }}>
                 {job.status}
               </span>
