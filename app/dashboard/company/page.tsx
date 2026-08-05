@@ -2,22 +2,21 @@ import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import { logout } from '@/app/actions';
+import { ensureCompanyMembership } from '@/lib/ensureCompanyMembership';
 
 export default async function CompanyDashboard() {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect('/login');
 
-  const { data: membership } = await supabase
-    .from('company_members')
-    .select('company_id, role, companies(name)')
-    .eq('user_id', user.id)
-    .maybeSingle();
-
-  if (!membership) {
+  let membership;
+  try {
+    membership = await ensureCompanyMembership(supabase, user.id, user.email || 'you@example.com');
+  } catch (err: any) {
     return (
       <div className="container">
-        <p>Setting up your company… if this doesn&apos;t resolve, refresh the page.</p>
+        <p>Could not set up your company account: {err.message}</p>
+        <p style={{ fontSize: 13, color: 'var(--slate)' }}>Please contact support and mention this error.</p>
       </div>
     );
   }
