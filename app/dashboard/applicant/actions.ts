@@ -4,8 +4,6 @@ import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { scoreApplication } from '@/lib/scoreApplication';
 
-export const maxDuration = 30;
-
 export async function submitApplication(formData: FormData) {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();

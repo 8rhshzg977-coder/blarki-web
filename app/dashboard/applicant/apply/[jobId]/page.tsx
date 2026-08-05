@@ -2,6 +2,8 @@ import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { submitApplication } from '@/app/dashboard/applicant/actions';
 
+export const maxDuration = 30; // gives the AI scoring call room to finish before the redirect
+
 export default async function ApplyPage({ params }: { params: { jobId: string } }) {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
