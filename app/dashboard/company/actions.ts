@@ -24,7 +24,7 @@ export async function publishJob(formData: FormData) {
   const payRange = String(formData.get('payRange') || '');
   const description = String(formData.get('description') || '');
   const questionsRaw = String(formData.get('questions') || '[]');
-  let questions: string[] = [];
+  let questions: { text: string; type: string }[] = [];
   try { questions = JSON.parse(questionsRaw); } catch { questions = []; }
 
   const { data: job, error } = await supabase
@@ -45,7 +45,7 @@ export async function publishJob(formData: FormData) {
 
   if (questions.length) {
     await supabase.from('screening_questions').insert(
-      questions.map((q, i) => ({ job_id: job.id, question_text: q, order_index: i }))
+      questions.map((q, i) => ({ job_id: job.id, question_text: q.text, answer_type: q.type || 'text', order_index: i }))
     );
   }
 

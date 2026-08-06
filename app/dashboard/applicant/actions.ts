@@ -28,7 +28,12 @@ export async function submitApplication(formData: FormData) {
     .single();
 
   if (error || !application) {
-    redirect(`/dashboard/applicant/apply/${jobId}?error=Could+not+submit+application`);
+    if (error?.code === '23505') {
+      // Unique constraint on (job_id, applicant_id) — they already applied.
+      redirect(`/dashboard/applicant/apply/${jobId}?error=You've+already+applied+to+this+job`);
+    }
+    console.error('submitApplication insert failed:', error);
+    redirect(`/dashboard/applicant/apply/${jobId}?error=Could+not+submit+application+-+please+try+again`);
   }
 
   const { data: questions } = await supabase

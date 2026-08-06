@@ -1,5 +1,7 @@
 import Link from 'next/link';
 
+export const maxDuration = 30; // covers the AI scoring call triggered on application submit
+
 export default function ApplicantLayout({ children }: { children: React.ReactNode }) {
   return (
     <div>

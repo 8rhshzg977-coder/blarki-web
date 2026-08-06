@@ -12,7 +12,7 @@ export default function NewJobPage() {
   const [requirements, setRequirements] = useState('');
   const [context, setContext] = useState('');
   const [description, setDescription] = useState('');
-  const [questions, setQuestions] = useState<string[]>([]);
+  const [questions, setQuestions] = useState<{ text: string; type: 'text' | 'yes_no' }[]>([]);
   const [generating, setGenerating] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [error, setError] = useState('');
@@ -29,7 +29,7 @@ export default function NewJobPage() {
       const data = await res.json();
       if (!res.ok) { setError(data.error || 'Generation failed.'); setGenerating(false); return; }
       setDescription(data.description);
-      setQuestions(data.questions || []);
+      setQuestions((data.questions || []).map((q: any) => typeof q === 'string' ? { text: q, type: 'text' } : q));
       setStep(2);
     } catch (e: any) {
       setError(e.message);
@@ -83,10 +83,18 @@ export default function NewJobPage() {
             <textarea rows={8} name="description" value={description} onChange={(e) => setDescription(e.target.value)} />
             <label>Screening questions (edit freely)</label>
             {questions.map((q, i) => (
-              <textarea key={i} rows={2} style={{ marginBottom: 8 }} value={q}
-                onChange={(e) => setQuestions(questions.map((qq, ii) => ii === i ? e.target.value : qq))} />
+              <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 8, alignItems: 'flex-start' }}>
+                <textarea rows={2} style={{ flex: 1 }} value={q.text}
+                  onChange={(e) => setQuestions(questions.map((qq, ii) => ii === i ? { ...qq, text: e.target.value } : qq))} />
+                <select style={{ width: 110 }} value={q.type}
+                  onChange={(e) => setQuestions(questions.map((qq, ii) => ii === i ? { ...qq, type: e.target.value as 'text' | 'yes_no' } : qq))}>
+                  <option value="text">Open answer</option>
+                  <option value="yes_no">Yes / No</option>
+                </select>
+                <button type="button" className="btn-secondary" onClick={() => setQuestions(questions.filter((_, ii) => ii !== i))}>✕</button>
+              </div>
             ))}
-            <button type="button" className="btn-secondary" onClick={() => setQuestions([...questions, ''])}>+ Add a question</button>
+            <button type="button" className="btn-secondary" onClick={() => setQuestions([...questions, { text: '', type: 'text' }])}>+ Add a question</button>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 18 }}>
               <button type="button" className="btn-secondary" onClick={() => setStep(1)}>← Back</button>
               <button className="btn-gold" type="submit" disabled={publishing}>{publishing ? 'Publishing…' : 'Publish job posting'}</button>

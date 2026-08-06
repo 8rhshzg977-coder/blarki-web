@@ -1,44 +1,97 @@
-import { redirect } from 'next/navigation';
-import { createClient } from '@/lib/supabase/server';
+'use client';
+
+import { Suspense, useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { createClient } from '@/lib/supabase/client';
 import { submitApplication } from '@/app/dashboard/applicant/actions';
 
-export const maxDuration = 30; // gives the AI scoring call room to finish before the redirect
-
-export default async function ApplyPage({ params }: { params: { jobId: string } }) {
+function ApplyForm({ jobId }: { jobId: string }) {
   const supabase = createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect('/login');
+  const searchParams = useSearchParams();
+  const urlError = searchParams.get('error');
 
-  const { data: job } = await supabase
-    .from('jobs')
-    .select('id, title, location, description')
-    .eq('id', params.jobId)
-    .single();
+  const [job, setJob] = useState<any>(null);
+  const [questions, setQuestions] = useState<any[]>([]);
+  const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [submitting, setSubmitting] = useState(false);
+  const draftKey = `blarki-apply-draft-${jobId}`;
 
-  const { data: questions } = await supabase
-    .from('screening_questions')
-    .select('id, question_text')
-    .eq('job_id', params.jobId)
-    .order('order_index');
+  useEffect(() => {
+    (async () => {
+      const { data: jobData } = await supabase.from('jobs').select('id, title, location, description').eq('id', jobId).single();
+      const { data: qData } = await supabase.from('screening_questions').select('id, question_text, answer_type').eq('job_id', jobId).order('order_index');
+      setJob(jobData);
+      setQuestions(qData || []);
 
-  if (!job) return <div className="container">Job not found.</div>;
+      // Restore any in-progress answers so switching tabs/pages doesn't lose them
+      try {
+        const saved = sessionStorage.getItem(draftKey);
+        if (saved) setAnswers(JSON.parse(saved));
+      } catch {}
+    })();
+  }, [jobId]);
+
+  function updateAnswer(questionId: string, value: string) {
+    const next = { ...answers, [questionId]: value };
+    setAnswers(next);
+    try { sessionStorage.setItem(draftKey, JSON.stringify(next)); } catch {}
+  }
+
+  async function handleSubmit(formData: FormData) {
+    setSubmitting(true);
+    await submitApplication(formData);
+    // On success this redirects away entirely. If we're still here, it
+    // failed and redirected back with ?error= — clear the saved draft only
+    // once we know it actually went through (handled by the redirect itself
+    // navigating to a different page, which unmounts this component).
+    setSubmitting(false);
+  }
+
+  if (!job) return <div className="container">Loading…</div>;
 
   return (
     <div className="container" style={{ maxWidth: 600 }}>
       <div className="eyebrow">{job.location}</div>
       <h1 style={{ fontSize: 24, margin: '4px 0 20px' }}>{job.title}</h1>
-      <form action={submitApplication}>
+
+      {urlError && <div className="error-box" style={{ marginBottom: 16 }}>{decodeURIComponent(urlError.replace(/\+/g, ' '))}</div>}
+
+      <form action={handleSubmit}>
         <input type="hidden" name="jobId" value={job.id} />
         <div className="card">
-          {questions?.map((q) => (
-            <div key={q.id}>
+          {questions.map((q) => (
+            <div key={q.id} style={{ marginBottom: 14 }}>
               <label>{q.question_text}</label>
-              <textarea rows={2} name={`answer-${q.id}`} />
+              {q.answer_type === 'yes_no' ? (
+                <div style={{ display: 'flex', gap: 16, marginTop: 6 }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 400 }}>
+                    <input type="radio" name={`answer-${q.id}`} value="Yes" style={{ width: 'auto' }}
+                      checked={answers[q.id] === 'Yes'} onChange={() => updateAnswer(q.id, 'Yes')} /> Yes
+                  </label>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 400 }}>
+                    <input type="radio" name={`answer-${q.id}`} value="No" style={{ width: 'auto' }}
+                      checked={answers[q.id] === 'No'} onChange={() => updateAnswer(q.id, 'No')} /> No
+                  </label>
+                </div>
+              ) : (
+                <textarea rows={2} name={`answer-${q.id}`} value={answers[q.id] || ''}
+                  onChange={(e) => updateAnswer(q.id, e.target.value)} />
+              )}
             </div>
           ))}
-          <button className="btn-gold" type="submit" style={{ marginTop: 16 }}>Submit application</button>
+          <button className="btn-gold" type="submit" disabled={submitting} style={{ marginTop: 6 }}>
+            {submitting ? 'Submitting…' : 'Submit application'}
+          </button>
         </div>
       </form>
     </div>
+  );
+}
+
+export default function ApplyPage({ params }: { params: { jobId: string } }) {
+  return (
+    <Suspense fallback={<div className="container">Loading…</div>}>
+      <ApplyForm jobId={params.jobId} />
+    </Suspense>
   );
 }

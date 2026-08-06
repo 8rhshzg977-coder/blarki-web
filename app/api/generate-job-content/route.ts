@@ -39,10 +39,13 @@ First, think through what this specific role actually needs day-to-day. ${CATEGO
 
 Then produce:
 1. A clear, accurate, candidate-facing job description (150-250 words). No exaggerated claims, no requirements that weren't given or reasonably implied by the title/category.
-2. 4-6 screening questions that would genuinely help tell a qualified candidate from an unqualified one for THIS specific role. Base them only on job-related qualifications, skills, and experience. Never write a question that tries to infer personality, honesty, or protected characteristics.
+2. 4-8 screening questions that would genuinely help tell a qualified candidate from an unqualified one for THIS specific role. Base them only on job-related qualifications, skills, and experience. Never write a question that tries to infer personality, honesty, or protected characteristics, and never ask for age or date of birth.
+   - Use short "yes_no" questions for clear eligibility gates: work authorization, willingness to work required hours/weekends, physical requirements the role genuinely has (e.g. "can you lift 50 lbs?" only if the role requires it), holding a required license/certification.
+   - Use "text" questions for anything needing an actual answer: experience, specific skills, situational/behavioral questions.
+   - A fast, entry-level role (retail, food service, warehouse) should lean mostly yes_no plus 1-2 short text questions. A specialized role (engineering, skilled trades, healthcare, software) should have more text questions covering specific tools/certifications/experience.
 
 Return JSON exactly in this shape, nothing else:
-{"description": "...", "questions": ["...", "...", "..."]}`;
+{"description": "...", "questions": [{"text": "...", "type": "yes_no"}, {"text": "...", "type": "text"}]}`;
 
   try {
     const apiRes = await fetch('https://api.anthropic.com/v1/messages', {
