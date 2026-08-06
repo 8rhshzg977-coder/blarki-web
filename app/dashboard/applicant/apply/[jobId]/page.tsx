@@ -1,12 +1,13 @@
 'use client';
 
 import { Suspense, useEffect, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { submitApplication } from '@/app/dashboard/applicant/actions';
 
 function ApplyForm({ jobId }: { jobId: string }) {
   const supabase = createClient();
+  const router = useRouter();
   const searchParams = useSearchParams();
   const urlError = searchParams.get('error');
 
@@ -39,11 +40,14 @@ function ApplyForm({ jobId }: { jobId: string }) {
 
   async function handleSubmit(formData: FormData) {
     setSubmitting(true);
-    await submitApplication(formData);
-    // On success this redirects away entirely. If we're still here, it
-    // failed and redirected back with ?error= — clear the saved draft only
-    // once we know it actually went through (handled by the redirect itself
-    // navigating to a different page, which unmounts this component).
+    const result = await submitApplication(formData);
+    if (result?.success) {
+      try { sessionStorage.removeItem(draftKey); } catch {}
+      router.push('/dashboard/applicant');
+      return;
+    }
+    // If we're still here without a thrown redirect, something unexpected
+    // happened server-side that didn't come back as a normal error redirect.
     setSubmitting(false);
   }
 
