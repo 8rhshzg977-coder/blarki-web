@@ -2,7 +2,6 @@
 
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
-import { scoreApplication } from '@/lib/scoreApplication';
 
 export async function submitApplication(formData: FormData) {
   const supabase = createClient();
@@ -51,13 +50,5 @@ export async function submitApplication(formData: FormData) {
     if (answerRows.length) await supabase.from('application_answers').insert(answerRows);
   }
 
-  // Score before returning — Vercel can freeze the function right after a
-  // response is sent, which could kill an unawaited background call.
-  try {
-    await scoreApplication(supabase, application.id);
-  } catch (err) {
-    console.error('Scoring failed (application still submitted):', err);
-  }
-
-  return { success: true };
+  return { success: true, applicationId: application.id };
 }

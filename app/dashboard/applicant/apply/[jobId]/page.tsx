@@ -42,11 +42,18 @@ function ApplyForm({ jobId }: { jobId: string }) {
     const result = await submitApplication(formData);
     if (result?.success) {
       try { sessionStorage.removeItem(draftKey); } catch {}
+      // Trigger scoring in the background — keepalive lets this request
+      // finish even after we navigate away, instead of making the
+      // applicant wait for the AI call before they can move on.
+      fetch('/api/score-application', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ applicationId: result.applicationId }),
+        keepalive: true,
+      }).catch(() => {});
       window.location.href = '/dashboard/applicant';
       return;
     }
-    // If we're still here without a thrown redirect, something unexpected
-    // happened server-side that didn't come back as a normal error redirect.
     setSubmitting(false);
   }
 
