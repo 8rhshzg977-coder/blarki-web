@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
+import StatusSelect from './StatusSelect';
 
 export default async function ApplicantsPage({ params }: { params: { jobId: string } }) {
   const supabase = createClient();
@@ -53,7 +54,7 @@ export default async function ApplicantsPage({ params }: { params: { jobId: stri
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 10 }}>
               <div>
                 <div style={{ fontWeight: 600, fontSize: 15 }}>#{i + 1} — {profile?.full_name || 'Unnamed applicant'}</div>
-                <span className="tagpill" style={{ marginTop: 4, display: 'inline-block' }}>{app.status}</span>
+                <StatusSelect applicationId={app.id} jobId={job.id} currentStatus={app.status} />
               </div>
               <div style={{ textAlign: 'right' }}>
                 <div style={{ fontSize: 22, fontWeight: 700, color: scoreColor }}>
