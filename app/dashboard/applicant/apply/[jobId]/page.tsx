@@ -1,13 +1,12 @@
 'use client';
 
 import { Suspense, useEffect, useState } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { submitApplication } from '@/app/dashboard/applicant/actions';
 
 function ApplyForm({ jobId }: { jobId: string }) {
   const supabase = createClient();
-  const router = useRouter();
   const searchParams = useSearchParams();
   const urlError = searchParams.get('error');
 
@@ -43,7 +42,7 @@ function ApplyForm({ jobId }: { jobId: string }) {
     const result = await submitApplication(formData);
     if (result?.success) {
       try { sessionStorage.removeItem(draftKey); } catch {}
-      router.push('/dashboard/applicant');
+      window.location.href = '/dashboard/applicant';
       return;
     }
     // If we're still here without a thrown redirect, something unexpected
