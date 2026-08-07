@@ -42,7 +42,7 @@ export default async function ApplicantDashboard({ searchParams }: { searchParam
         .eq('confirmation_status', 'awaiting_response');
       pendingInvites = (invites || []).map((inv) => ({
         ...inv,
-        jobTitle: (myApps || []).find((a) => a.id === inv.application_id)?.jobs?.title || 'a role',
+        jobTitle: ((myApps || []).find((a) => a.id === inv.application_id)?.jobs as any)?.title || 'a role',
       }));
     }
   }
