@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import { logout } from '@/app/actions';
 import { CATEGORIES } from '@/lib/categories';
+import InterviewInviteCard from './InterviewInviteCard';
 
 export default async function ApplicantDashboard({ searchParams }: { searchParams: { q?: string; category?: string } }) {
   const supabase = createClient();
@@ -28,6 +29,24 @@ export default async function ApplicantDashboard({ searchParams }: { searchParam
   const appliedJobIds = new Set((myApplications || []).map((a) => a.job_id));
   const categories = CATEGORIES;
 
+  const { data: applicantProfile } = await supabase.from('applicant_profiles').select('id').eq('user_id', user.id).single();
+  let pendingInvites: any[] = [];
+  if (applicantProfile) {
+    const { data: myApps } = await supabase.from('applications').select('id, job_id, jobs(title)').eq('applicant_id', applicantProfile.id);
+    const appIds = (myApps || []).map((a) => a.id);
+    if (appIds.length) {
+      const { data: invites } = await supabase
+        .from('interviews')
+        .select('id, confirmed_slot, application_id, confirmation_status')
+        .in('application_id', appIds)
+        .eq('confirmation_status', 'awaiting_response');
+      pendingInvites = (invites || []).map((inv) => ({
+        ...inv,
+        jobTitle: (myApps || []).find((a) => a.id === inv.application_id)?.jobs?.title || 'a role',
+      }));
+    }
+  }
+
   return (
     <div className="container">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
@@ -37,6 +56,13 @@ export default async function ApplicantDashboard({ searchParams }: { searchParam
         </div>
         <form action={logout}><button className="btn-secondary" type="submit">Sign out</button></form>
       </div>
+
+      {pendingInvites.length > 0 && (
+        <div style={{ marginBottom: 24 }}>
+          <div className="eyebrow" style={{ marginBottom: 10 }}>INTERVIEW INVITATIONS</div>
+          {pendingInvites.map((inv) => <InterviewInviteCard key={inv.id} invite={inv} />)}
+        </div>
+      )}
 
       <form method="get" style={{ marginBottom: 16 }}>
         <input name="q" defaultValue={searchParams.q} placeholder="Search job titles — e.g. Nurse, Electrician, Cashier" />

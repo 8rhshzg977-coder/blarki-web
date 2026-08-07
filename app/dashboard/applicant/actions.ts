@@ -52,3 +52,54 @@ export async function submitApplication(formData: FormData) {
 
   return { success: true, applicationId: application.id };
 }
+
+export async function respondToInterview(interviewId: string, accept: boolean) {
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: 'Not authenticated' };
+
+  const { data: interview } = await supabase
+    .from('interviews')
+    .select('id, application_id, confirmed_slot, applications(job_id)')
+    .eq('id', interviewId)
+    .single();
+  if (!interview) return { error: 'Interview not found' };
+
+  if (!accept) {
+    await supabase.from('interviews').update({ confirmation_status: 'declined', status: 'cancelled' }).eq('id', interviewId);
+    await supabase.from('applications').update({ status: 'recruiter_review' }).eq('id', interview.application_id);
+    return { success: true, accepted: false };
+  }
+
+  // Generate quick, practical prep info for the accepted interview.
+  let prepInfo = '';
+  try {
+    const jobId = (interview as any).applications?.job_id;
+    const { data: job } = await supabase.from('jobs').select('title, category, location').eq('id', jobId).single();
+    const apiRes = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': process.env.ANTHROPIC_API_KEY!,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 400,
+        system: 'Write brief, practical interview-prep advice for a job applicant. Plain text, 3-5 short bullet points, no markdown headers. Cover: how early to arrive, general dress-code expectation for this type of role, and anything reasonable to bring (resume copy, ID, portfolio if relevant). Keep it generic and safe — do not invent specific company policies you were not told.',
+        messages: [{ role: 'user', content: `Job: ${job?.title} (${job?.category}) at a company in ${job?.location}. Write the prep tips.` }],
+      }),
+    });
+    if (apiRes.ok) {
+      const data = await apiRes.json();
+      prepInfo = data.content.map((b: any) => (b.type === 'text' ? b.text : '')).join('');
+    }
+  } catch (err) {
+    console.error('Interview prep generation failed:', err);
+  }
+
+  await supabase.from('interviews').update({ confirmation_status: 'confirmed', status: 'scheduled', prep_info: prepInfo }).eq('id', interviewId);
+  await supabase.from('applications').update({ status: 'interview_scheduled' }).eq('id', interview.application_id);
+
+  return { success: true, accepted: true, prepInfo };
+}
