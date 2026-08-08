@@ -27,6 +27,13 @@ export async function updateApplicationStatus(applicationId: string, newStatus: 
     return { error: 'Could not update status — please try again.' };
   }
 
+  // Hiring someone closes the job immediately, even if its closing date
+  // hasn't arrived yet — no reason to keep taking applications for a role
+  // that's already filled.
+  if (newStatus === 'hired') {
+    await supabase.from('jobs').update({ status: 'closed', closed_reason: 'filled_by_employer' }).eq('id', jobId);
+  }
+
   revalidatePath(`/dashboard/company/jobs/${jobId}/applicants`);
   return { success: true };
 }

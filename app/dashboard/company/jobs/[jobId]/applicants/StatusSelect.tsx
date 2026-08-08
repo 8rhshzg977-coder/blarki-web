@@ -17,7 +17,7 @@ const STAGES = [
   { value: 'rejected', label: 'Rejected' },
 ];
 
-export default function StatusSelect({ applicationId, jobId, currentStatus }: { applicationId: string; jobId: string; currentStatus: string }) {
+export default function StatusSelect({ applicationId, jobId, currentStatus, interview }: { applicationId: string; jobId: string; currentStatus: string; interview: { confirmed_slot: string; confirmation_status: string } | null }) {
   const [status, setStatus] = useState(currentStatus);
   const [saving, setSaving] = useState(false);
   const [showScheduler, setShowScheduler] = useState(false);
@@ -55,6 +55,22 @@ export default function StatusSelect({ applicationId, jobId, currentStatus }: { 
       <select value={status} disabled={saving} onChange={(e) => handleChange(e.target.value)} style={{ width: 'auto', fontSize: 12, padding: '4px 8px' }}>
         {STAGES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
       </select>
+
+      {interview && (
+        <div style={{
+          marginTop: 8, padding: '12px 14px', borderRadius: 10, fontSize: 13, fontWeight: 600,
+          background: interview.confirmation_status === 'confirmed' ? 'var(--teal-soft)' : interview.confirmation_status === 'declined' ? 'var(--rose-soft)' : 'var(--gold-soft)',
+          color: interview.confirmation_status === 'confirmed' ? 'var(--teal)' : interview.confirmation_status === 'declined' ? 'var(--rose)' : '#8a6210',
+          border: `1px solid ${interview.confirmation_status === 'confirmed' ? 'var(--teal)' : interview.confirmation_status === 'declined' ? 'var(--rose)' : 'var(--gold)'}`,
+        }}>
+          {interview.confirmation_status === 'confirmed' && '✓ Interview confirmed — '}
+          {interview.confirmation_status === 'declined' && '✕ Interview declined — was '}
+          {interview.confirmation_status === 'awaiting_response' && '⏳ Awaiting response — '}
+          {new Date(interview.confirmed_slot).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
+          {' at '}
+          {new Date(interview.confirmed_slot).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}
+        </div>
+      )}
 
       {showScheduler && (
         <div style={{ marginTop: 8, padding: 10, background: 'var(--paper-dim)', borderRadius: 8, fontSize: 12 }}>

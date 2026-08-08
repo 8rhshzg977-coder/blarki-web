@@ -22,10 +22,15 @@ export async function publishJob(formData: FormData) {
   const category = String(formData.get('category') || 'retail');
   const location = String(formData.get('location') || '');
   const payRange = String(formData.get('payRange') || '');
+  const closesAt = String(formData.get('closesAt') || '');
   const description = String(formData.get('description') || '');
   const questionsRaw = String(formData.get('questions') || '[]');
   let questions: { text: string; type: string }[] = [];
   try { questions = JSON.parse(questionsRaw); } catch { questions = []; }
+
+  if (!closesAt) {
+    return { error: 'An applications-close date is required — a job cannot be posted without one.' };
+  }
 
   const { data: job, error } = await supabase
     .from('jobs')
@@ -35,6 +40,7 @@ export async function publishJob(formData: FormData) {
       category,
       location,
       pay_range: payRange,
+      closes_at: closesAt,
       description,
       status: 'open',
     })

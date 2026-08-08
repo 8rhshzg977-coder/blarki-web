@@ -30,6 +30,13 @@ export default async function ApplicantsPage({ params }: { params: { jobId: stri
     .eq('job_id', params.jobId)
     .order('match_score', { ascending: false, nullsFirst: false });
 
+  const appIds = (applications || []).map((a) => a.id);
+  const { data: interviews } = appIds.length
+    ? await supabase.from('interviews').select('application_id, confirmed_slot, confirmation_status').in('application_id', appIds)
+    : { data: [] as any[] };
+  const interviewByApp: Record<string, any> = {};
+  (interviews || []).forEach((iv) => { interviewByApp[iv.application_id] = iv; });
+
   return (
     <div className="container">
       <div style={{ marginBottom: 20 }}>
@@ -54,7 +61,7 @@ export default async function ApplicantsPage({ params }: { params: { jobId: stri
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 10 }}>
               <div>
                 <div style={{ fontWeight: 600, fontSize: 15 }}>#{i + 1} — {profile?.full_name || 'Unnamed applicant'}</div>
-                <StatusSelect applicationId={app.id} jobId={job.id} currentStatus={app.status} />
+                <StatusSelect applicationId={app.id} jobId={job.id} currentStatus={app.status} interview={interviewByApp[app.id] || null} />
               </div>
               <div style={{ textAlign: 'right' }}>
                 <div style={{ fontSize: 22, fontWeight: 700, color: scoreColor }}>

@@ -9,6 +9,7 @@ export default function NewJobPage() {
   const [category, setCategory] = useState('retail');
   const [location, setLocation] = useState('');
   const [payRange, setPayRange] = useState('');
+  const [closesAt, setClosesAt] = useState('');
   const [requirements, setRequirements] = useState('');
   const [context, setContext] = useState('');
   const [description, setDescription] = useState('');
@@ -40,6 +41,7 @@ export default function NewJobPage() {
   async function handlePublish(formData: FormData) {
     setPublishing(true);
     formData.set('questions', JSON.stringify(questions));
+    formData.set('closesAt', closesAt);
     const result = await publishJob(formData);
     setPublishing(false);
     if (result?.error) setError(result.error);
@@ -62,11 +64,16 @@ export default function NewJobPage() {
           <input value={location} onChange={(e) => setLocation(e.target.value)} placeholder="e.g. Houston, TX" />
           <label>Pay range (optional)</label>
           <input value={payRange} onChange={(e) => setPayRange(e.target.value)} placeholder="e.g. $70k-$90k/yr" />
+          <label>Applications close <span style={{ color: 'var(--rose)' }}>*</span> (required)</label>
+          <input type="date" required value={closesAt} onChange={(e) => setClosesAt(e.target.value)} min={new Date().toISOString().slice(0, 10)} />
+          <div style={{ fontSize: 12, color: 'var(--slate)', marginTop: 4 }}>
+            This job automatically comes down and stops accepting applicants on this date — no stale listings.
+          </div>
           <label>Must-have requirements</label>
           <textarea rows={3} value={requirements} onChange={(e) => setRequirements(e.target.value)} />
           <label>Anything else the AI should know?</label>
           <textarea rows={2} value={context} onChange={(e) => setContext(e.target.value)} />
-          <button className="btn-primary" style={{ marginTop: 16 }} disabled={!title || generating} onClick={generate}>
+          <button className="btn-primary" style={{ marginTop: 16 }} disabled={!title || !closesAt || generating} onClick={generate}>
             {generating ? 'Generating…' : 'Next: AI description & questions →'}
           </button>
         </div>

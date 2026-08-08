@@ -28,6 +28,17 @@ export default async function CompanyDashboard() {
     .eq('company_id', membership.company_id)
     .order('created_at', { ascending: false });
 
+  // Real-time auto-close: any open job whose closing date has passed gets
+  // flipped the moment this page loads, rather than staying "open" until a
+  // background job eventually catches it — matches the "no stale listings"
+  // requirement directly.
+  const todayIso = new Date().toISOString().slice(0, 10);
+  const toClose = (jobs || []).filter((j) => j.status === 'open' && j.closes_at && j.closes_at < todayIso);
+  if (toClose.length) {
+    await supabase.from('jobs').update({ status: 'closed', closed_reason: 'date_reached' }).in('id', toClose.map((j) => j.id));
+    toClose.forEach((j) => { j.status = 'closed'; });
+  }
+
   const jobIds = (jobs || []).map((j) => j.id);
   const { data: applications } = jobIds.length
     ? await supabase.from('applications').select('id, job_id, created_at').in('job_id', jobIds)

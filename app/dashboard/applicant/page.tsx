@@ -12,8 +12,9 @@ export default async function ApplicantDashboard({ searchParams }: { searchParam
 
   let query = supabase
     .from('jobs')
-    .select('id, title, category, location, pay_range, description, status')
+    .select('id, title, category, location, pay_range, description, status, closes_at')
     .eq('status', 'open')
+    .or(`closes_at.is.null,closes_at.gte.${new Date().toISOString().slice(0, 10)}`)
     .order('created_at', { ascending: false });
 
   if (searchParams.q) query = query.ilike('title', `%${searchParams.q}%`);
