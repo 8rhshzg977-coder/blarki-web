@@ -5,10 +5,13 @@ export const maxDuration = 30; // covers the AI scoring call triggered on applic
 export default function ApplicantLayout({ children }: { children: React.ReactNode }) {
   return (
     <div>
-      <div style={{ borderBottom: '1px solid var(--line)', padding: '14px 24px', display: 'flex', gap: 20, alignItems: 'center' }}>
-        <span style={{ fontWeight: 700, fontFamily: 'serif' }}>Blarki</span>
-        <Link href="/dashboard/applicant">Find jobs</Link>
-        <Link href="/dashboard/applicant/profile">My profile</Link>
+      <div style={{
+        borderBottom: '1px solid var(--line)', padding: '14px 28px', display: 'flex', gap: 22, alignItems: 'center',
+        background: 'var(--ink)', color: 'var(--paper)',
+      }}>
+        <span style={{ fontFamily: "'Instrument Serif', serif", fontSize: 19, letterSpacing: '0.01em' }}>Blarki</span>
+        <Link href="/dashboard/applicant" style={{ color: 'var(--paper)', fontSize: 13.5, opacity: 0.85 }}>Find jobs</Link>
+        <Link href="/dashboard/applicant/profile" style={{ color: 'var(--paper)', fontSize: 13.5, opacity: 0.85 }}>My profile</Link>
       </div>
       {children}
     </div>

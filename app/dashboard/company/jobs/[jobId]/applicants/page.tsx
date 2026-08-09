@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import StatusSelect from './StatusSelect';
+import ScoreRing from '@/components/ScoreRing';
 
 export default async function ApplicantsPage({ params }: { params: { jobId: string } }) {
   const supabase = createClient();
@@ -55,19 +56,16 @@ export default async function ApplicantsPage({ params }: { params: { jobId: stri
       {applications?.map((app: any, i) => {
         const profile = app.applicant_profiles;
         const score = app.match_score;
-        const scoreColor = score == null ? 'var(--slate)' : score >= 85 ? 'var(--teal)' : score >= 65 ? 'var(--gold)' : 'var(--rose)';
         return (
           <div key={app.id} className="card">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 10 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 14 }}>
               <div>
                 <div style={{ fontWeight: 600, fontSize: 15 }}>#{i + 1} — {profile?.full_name || 'Unnamed applicant'}</div>
                 <StatusSelect applicationId={app.id} jobId={job.id} currentStatus={app.status} interview={interviewByApp[app.id] || null} />
               </div>
-              <div style={{ textAlign: 'right' }}>
-                <div style={{ fontSize: 22, fontWeight: 700, color: scoreColor }}>
-                  {score == null ? 'Scoring…' : `${score}%`}
-                </div>
-                <div style={{ fontSize: 11, color: 'var(--slate)' }}>match score</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <ScoreRing score={score} />
+                <div style={{ fontSize: 11, color: 'var(--slate)', maxWidth: 60 }}>{score == null ? 'scoring…' : 'match score'}</div>
               </div>
             </div>
 

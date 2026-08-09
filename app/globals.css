@@ -1,83 +1,135 @@
+@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap');
+
 :root {
-  --ink: #1C2430;
-  --ink-soft: #2C3746;
-  --paper: #F6F4EF;
-  --paper-dim: #EDEAE1;
-  --gold: #C9922F;
-  --gold-soft: #E9D3A8;
-  --teal: #3D6B62;
-  --teal-soft: #DCE8E4;
-  --rose: #B4483A;
-  --rose-soft: #F3DEDA;
-  --slate: #6E7681;
-  --line: #DAD5C8;
+  /* Ink & paper — deliberately cool-neutral, not the warm cream that's
+     become the generic "AI tool" default */
+  --ink: #16202C;
+  --ink-soft: #29394C;
+  --paper: #F6F5F1;
+  --paper-dim: #ECEAE2;
+  --paper-line: #DEDBCE;
+
+  /* Credential gold — a seal/wax-stamp gold, not a bright "AI sparkle" gold */
+  --gold: #B8873A;
+  --gold-soft: #EADFC4;
+  --gold-deep: #8A6323;
+
+  /* Verified teal & alert rose — muted, not neon */
+  --teal: #2F6659;
+  --teal-soft: #DCE9E4;
+  --rose: #A8483D;
+  --rose-soft: #F1DEDA;
+
+  --slate: #66707C;
+  --line: var(--paper-line);
+
+  --radius-sm: 6px;
+  --radius: 10px;
+  --radius-lg: 16px;
+  --shadow-card: 0 1px 2px rgba(22, 32, 44, 0.04), 0 4px 14px rgba(22, 32, 44, 0.05);
+  --shadow-raised: 0 2px 6px rgba(22, 32, 44, 0.07), 0 10px 28px rgba(22, 32, 44, 0.08);
 }
 
 * { box-sizing: border-box; }
 
+html { scroll-behavior: smooth; }
+
 body {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   background: var(--paper);
   color: var(--ink);
+  font-size: 15px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
 }
 
-h1, h2, h3 { letter-spacing: -0.01em; }
+h1, h2, h3 {
+  font-family: 'Instrument Serif', Georgia, serif;
+  letter-spacing: -0.01em;
+  font-weight: 400;
+  line-height: 1.15;
+  margin: 0;
+}
 
-a { color: inherit; }
+a { color: inherit; text-decoration: none; }
+a:hover { text-decoration: underline; }
 
-.container { max-width: 1100px; margin: 0 auto; padding: 32px 24px; }
+/* Numbers, scores, and anything measured render in mono — the app's
+   signature move: precision, not decoration */
+.num, .score-ring .score-value {
+  font-family: 'JetBrains Mono', 'SF Mono', monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+.container { max-width: 1100px; margin: 0 auto; padding: 40px 28px; }
 
 .card {
   background: #fff;
   border: 1px solid var(--line);
-  border-radius: 12px;
-  padding: 20px 22px;
+  border-radius: var(--radius);
+  padding: 22px 24px;
   margin-bottom: 14px;
+  box-shadow: var(--shadow-card);
+  transition: box-shadow 0.15s ease;
 }
 
 input, select, textarea {
-  font-family: inherit;
+  font-family: 'Inter', sans-serif;
   border: 1px solid var(--line);
-  border-radius: 8px;
-  padding: 10px 12px;
-  font-size: 14px;
+  border-radius: var(--radius-sm);
+  padding: 11px 13px;
+  font-size: 14.5px;
   width: 100%;
   background: #fff;
   color: var(--ink);
+  transition: border-color 0.12s ease, box-shadow 0.12s ease;
 }
 input:focus, select:focus, textarea:focus {
   outline: none;
   border-color: var(--gold);
   box-shadow: 0 0 0 3px var(--gold-soft);
 }
+input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-visible, a:focus-visible {
+  outline: 2px solid var(--gold-deep);
+  outline-offset: 2px;
+}
 
 label {
   display: block;
-  font-size: 12px;
+  font-size: 12.5px;
   font-weight: 600;
-  margin: 14px 0 6px;
+  margin: 16px 0 6px;
   color: var(--ink-soft);
+  letter-spacing: 0.01em;
 }
 
 .btn-primary, .btn-gold, .btn-secondary {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   border: none;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   padding: 11px 20px;
   font-weight: 600;
   font-size: 14px;
   cursor: pointer;
   text-decoration: none;
+  transition: transform 0.1s ease, box-shadow 0.1s ease, background 0.15s ease;
 }
 .btn-primary { background: var(--ink); color: var(--paper); }
-.btn-gold { background: var(--gold); color: var(--ink); font-weight: 700; }
+.btn-primary:hover { background: var(--ink-soft); box-shadow: var(--shadow-raised); transform: translateY(-1px); text-decoration: none; }
+.btn-gold { background: var(--gold); color: #241A08; font-weight: 700; }
+.btn-gold:hover { background: var(--gold-deep); color: #fff; box-shadow: var(--shadow-raised); transform: translateY(-1px); text-decoration: none; }
 .btn-secondary { background: transparent; color: var(--ink); border: 1px solid var(--line); }
+.btn-secondary:hover { border-color: var(--ink); background: var(--paper-dim); text-decoration: none; }
+button:disabled { opacity: 0.5; cursor: not-allowed; transform: none !important; }
 
 .eyebrow {
   font-size: 11px;
   font-weight: 700;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.11em;
   text-transform: uppercase;
   color: var(--slate);
 }
@@ -85,11 +137,12 @@ label {
 .error-box {
   background: var(--rose-soft);
   color: var(--rose);
-  font-size: 13px;
+  font-size: 13.5px;
   font-weight: 600;
-  padding: 10px 12px;
-  border-radius: 8px;
-  margin-top: 12px;
+  padding: 11px 14px;
+  border-radius: var(--radius-sm);
+  margin-top: 14px;
+  border: 1px solid rgba(168, 72, 61, 0.2);
 }
 
 .tagpill {
@@ -98,7 +151,44 @@ label {
   color: var(--slate);
   font-size: 11px;
   font-weight: 600;
-  padding: 3px 9px;
-  border-radius: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
   margin-right: 6px;
+  border: 1px solid transparent;
+}
+
+/* The seal — Blarki's signature element. A stamped ring around every
+   match score and verification mark, in three tones by tier. */
+.score-ring {
+  --ring-color: var(--slate);
+  position: relative;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background:
+    radial-gradient(closest-side, #fff 72%, transparent 73% 100%),
+    conic-gradient(var(--ring-color) calc(var(--pct, 0) * 1%), var(--paper-dim) 0);
+  flex-shrink: 0;
+}
+.score-ring::after {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+}
+.score-ring .score-value {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink);
+}
+.score-ring.tier-high { --ring-color: var(--teal); }
+.score-ring.tier-mid { --ring-color: var(--gold); }
+.score-ring.tier-low { --ring-color: var(--rose); }
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; scroll-behavior: auto !important; }
 }
