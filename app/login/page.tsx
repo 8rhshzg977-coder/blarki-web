@@ -1,12 +1,19 @@
 'use client';
 
-import { useState } from 'react';
+import { Suspense, useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { login } from '@/app/actions';
 
-export default function LoginPage() {
+function LoginForm() {
+  const searchParams = useSearchParams();
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const urlError = searchParams.get('error');
+    if (urlError) setError(decodeURIComponent(urlError.replace(/\+/g, ' ')));
+  }, [searchParams]);
 
   async function handleSubmit(formData: FormData) {
     setError(''); setLoading(true);
@@ -36,5 +43,13 @@ export default function LoginPage() {
         No account yet? <Link href="/signup" style={{ color: 'var(--gold)', fontWeight: 600 }}>Create one</Link>
       </p>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginForm />
+    </Suspense>
   );
 }
