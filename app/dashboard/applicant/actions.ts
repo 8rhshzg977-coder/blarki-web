@@ -2,6 +2,7 @@
 
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 
 export async function submitApplication(formData: FormData) {
   const supabase = createClient();
@@ -50,6 +51,30 @@ export async function submitApplication(formData: FormData) {
     if (answerRows.length) await supabase.from('application_answers').insert(answerRows);
   }
 
+  // Notify the hiring team — everyone with owner/hr_manager on this job's company.
+  const { data: job } = await supabase.from('jobs').select('title, company_id').eq('id', jobId).single();
+  const { data: applicantName } = await supabase.from('applicant_profiles').select('full_name').eq('id', applicantProfile.id).single();
+  if (job) {
+    const { data: teamMembers } = await supabase
+      .from('company_members')
+      .select('user_id')
+      .eq('company_id', job.company_id)
+      .in('role', ['owner', 'hr_manager']);
+    if (teamMembers?.length) {
+      const admin = createAdminClient();
+      await admin.from('notifications').insert(
+        teamMembers.map((m) => ({
+          user_id: m.user_id,
+          type: 'new_applicant',
+          channel: 'in_app',
+          body: `${applicantName?.full_name || 'A new applicant'} applied to ${job.title}.`,
+          related_application_id: application.id,
+          read: false,
+        }))
+      );
+    }
+  }
+
   return { success: true, applicationId: application.id };
 }
 
@@ -68,6 +93,7 @@ export async function respondToInterview(interviewId: string, accept: boolean) {
   if (!accept) {
     await supabase.from('interviews').update({ confirmation_status: 'declined', status: 'cancelled' }).eq('id', interviewId);
     await supabase.from('applications').update({ status: 'recruiter_review' }).eq('id', interview.application_id);
+    await notifyEmployerOfResponse(supabase, interview, false);
     return { success: true, accepted: false };
   }
 
@@ -100,6 +126,34 @@ export async function respondToInterview(interviewId: string, accept: boolean) {
 
   await supabase.from('interviews').update({ confirmation_status: 'confirmed', status: 'scheduled', prep_info: prepInfo }).eq('id', interviewId);
   await supabase.from('applications').update({ status: 'interview_scheduled' }).eq('id', interview.application_id);
+  await notifyEmployerOfResponse(supabase, interview, true);
 
   return { success: true, accepted: true, prepInfo };
+}
+
+async function notifyEmployerOfResponse(supabase: any, interview: any, accepted: boolean) {
+  const jobId = interview.applications?.job_id;
+  if (!jobId) return;
+  const { data: job } = await supabase.from('jobs').select('title, company_id').eq('id', jobId).single();
+  if (!job) return;
+  const { data: appRow } = await supabase.from('applications').select('applicant_profiles(full_name)').eq('id', interview.application_id).single();
+  const applicantName = appRow?.applicant_profiles?.full_name || 'The applicant';
+  const { data: teamMembers } = await supabase
+    .from('company_members')
+    .select('user_id')
+    .eq('company_id', job.company_id)
+    .in('role', ['owner', 'hr_manager']);
+  if (teamMembers?.length) {
+    const admin = createAdminClient();
+    await admin.from('notifications').insert(
+      teamMembers.map((m: any) => ({
+        user_id: m.user_id,
+        type: 'interview_response',
+        channel: 'in_app',
+        body: `${applicantName} ${accepted ? 'accepted' : 'declined'} the interview for ${job.title}.`,
+        related_application_id: interview.application_id,
+        read: false,
+      }))
+    );
+  }
 }

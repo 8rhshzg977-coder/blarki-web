@@ -1,10 +1,24 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
+import { ensureProfileExists } from '@/lib/ensureProfileExists';
 import ScoreRing from '@/components/ScoreRing';
 
-export default async function Home() {
+export default async function Home({ searchParams }: { searchParams: { code?: string } }) {
   const supabase = createClient();
+
+  // Fallback catch: if Supabase's email template redirects straight to the
+  // Site URL (the homepage) instead of the custom /auth/confirm route,
+  // handle the confirmation code here too, so it never just silently drops
+  // the person on the plain homepage with an unused code in the URL.
+  if (searchParams.code) {
+    const { data, error } = await supabase.auth.exchangeCodeForSession(searchParams.code);
+    if (!error && data.user) {
+      await ensureProfileExists(supabase, data.user);
+    }
+    redirect('/auth/confirmed');
+  }
+
   const { data: { user } } = await supabase.auth.getUser();
 
   if (user) {

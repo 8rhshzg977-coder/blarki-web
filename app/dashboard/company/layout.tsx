@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import NotificationBell from '@/components/NotificationBell';
 
 export const maxDuration = 30;
 
@@ -12,6 +13,7 @@ export default function CompanyLayout({ children }: { children: React.ReactNode 
         <span style={{ fontFamily: "'Instrument Serif', serif", fontSize: 19, letterSpacing: '0.01em' }}>Blarki</span>
         <Link href="/dashboard/company" style={{ color: 'var(--paper)', fontSize: 13.5, opacity: 0.85 }}>Dashboard</Link>
         <Link href="/dashboard/company/new-job" style={{ color: 'var(--paper)', fontSize: 13.5, opacity: 0.85 }}>+ New job</Link>
+        <NotificationBell />
       </div>
       {children}
     </div>

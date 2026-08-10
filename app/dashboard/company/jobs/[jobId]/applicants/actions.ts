@@ -10,6 +10,14 @@ const VALID_STATUSES = [
   'final_decision', 'offer_sent', 'hired', 'rejected',
 ];
 
+const STATUS_LABELS: Record<string, string> = {
+  applied: 'received', ai_resume_review: 'being reviewed by our AI', recruiter_review: 'being reviewed by the hiring team',
+  hiring_manager_review: 'being reviewed by the hiring manager', interview_requested: 'moving to the interview stage',
+  interview_scheduled: 'scheduled for an interview', interview_completed: 'past the interview stage',
+  final_decision: 'in final decision', offer_sent: 'moving forward with an offer', hired: 'accepted — you got the job!',
+  rejected: 'not moving forward this time',
+};
+
 export async function updateApplicationStatus(applicationId: string, newStatus: string, jobId: string) {
   if (!VALID_STATUSES.includes(newStatus)) return { error: 'Invalid status' };
 
@@ -32,6 +40,26 @@ export async function updateApplicationStatus(applicationId: string, newStatus: 
   // that's already filled.
   if (newStatus === 'hired') {
     await supabase.from('jobs').update({ status: 'closed', closed_reason: 'filled_by_employer' }).eq('id', jobId);
+  }
+
+  // Notify the applicant of the status change.
+  const { data: application } = await supabase
+    .from('applications')
+    .select('applicant_profiles(user_id)')
+    .eq('id', applicationId)
+    .single();
+  const { data: job } = await supabase.from('jobs').select('title').eq('id', jobId).single();
+  const applicantUserId = (application as any)?.applicant_profiles?.user_id;
+  if (applicantUserId) {
+    const admin = createAdminClient();
+    await admin.from('notifications').insert({
+      user_id: applicantUserId,
+      type: 'status_change',
+      channel: 'in_app',
+      body: `Your application for ${job?.title || 'a role'} is now ${STATUS_LABELS[newStatus] || newStatus}.`,
+      related_application_id: applicationId,
+      read: false,
+    });
   }
 
   revalidatePath(`/dashboard/company/jobs/${jobId}/applicants`);
