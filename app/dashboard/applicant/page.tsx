@@ -5,6 +5,8 @@ import { logout } from '@/app/actions';
 import { CATEGORIES } from '@/lib/categories';
 import InterviewInviteCard from './InterviewInviteCard';
 
+export const dynamic = 'force-dynamic';
+
 export default async function ApplicantDashboard({ searchParams }: { searchParams: { q?: string; category?: string } }) {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();

@@ -4,6 +4,8 @@ import { createClient } from '@/lib/supabase/server';
 import { ensureProfileExists } from '@/lib/ensureProfileExists';
 import ScoreRing from '@/components/ScoreRing';
 
+export const dynamic = 'force-dynamic';
+
 export default async function Home({ searchParams }: { searchParams: { code?: string } }) {
   const supabase = createClient();
 

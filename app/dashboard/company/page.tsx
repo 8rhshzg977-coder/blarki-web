@@ -5,6 +5,8 @@ import { logout } from '@/app/actions';
 import { ensureCompanyMembership } from '@/lib/ensureCompanyMembership';
 import { CATEGORIES } from '@/lib/categories';
 
+export const dynamic = 'force-dynamic';
+
 export default async function CompanyDashboard() {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
