@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 import { logout } from '@/app/actions';
 import { ensureCompanyMembership } from '@/lib/ensureCompanyMembership';
 import { CATEGORIES } from '@/lib/categories';
+import DeleteJobButton from './DeleteJobButton';
 
 export const dynamic = 'force-dynamic';
 
@@ -114,9 +115,12 @@ export default async function CompanyDashboard() {
               {job.closes_at && <span className="tagpill">Closes {job.closes_at}</span>}
             </div>
           </div>
-          <Link href={`/dashboard/company/jobs/${job.id}/applicants`} className="btn-secondary">
-            View applicants ({applicationsByJob[job.id] || 0}) →
-          </Link>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-end' }}>
+            <Link href={`/dashboard/company/jobs/${job.id}/applicants`} className="btn-secondary">
+              View applicants ({applicationsByJob[job.id] || 0}) →
+            </Link>
+            <DeleteJobButton jobId={job.id} jobTitle={job.title} />
+          </div>
         </div>
       ))}
     </div>

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { extractJson } from '@/lib/extractJson';
+import { checkAndLogAiUsage } from '@/lib/aiRateLimit';
 
 export const maxDuration = 30; // give the Anthropic call room to finish instead of timing out silently
 
@@ -11,6 +12,11 @@ export async function POST(req: Request) {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+
+  const { allowed, remaining } = await checkAndLogAiUsage(user.id, 'parse_resume');
+  if (!allowed) {
+    return NextResponse.json({ error: "You've reached today's limit for this feature. It resets at midnight — try again tomorrow." }, { status: 429 });
+  }
 
   const body = await req.json();
   const { resumeText, resumeBase64, mediaType } = body;

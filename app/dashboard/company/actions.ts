@@ -57,3 +57,31 @@ export async function publishJob(formData: FormData) {
 
   redirect('/dashboard/company');
 }
+
+export async function deleteJob(jobId: string) {
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: 'Not authenticated' };
+
+  const { data: job } = await supabase.from('jobs').select('company_id').eq('id', jobId).single();
+  if (!job) return { error: 'Job not found' };
+
+  const { data: membership } = await supabase
+    .from('company_members')
+    .select('role')
+    .eq('company_id', job.company_id)
+    .eq('user_id', user.id)
+    .maybeSingle();
+
+  if (!membership || !['owner', 'hr_manager'].includes(membership.role)) {
+    return { error: 'You do not have permission to delete this job.' };
+  }
+
+  const { error } = await supabase.from('jobs').delete().eq('id', jobId);
+  if (error) {
+    console.error('deleteJob failed:', error);
+    return { error: 'Could not delete this job — please try again.' };
+  }
+
+  return { success: true };
+}
