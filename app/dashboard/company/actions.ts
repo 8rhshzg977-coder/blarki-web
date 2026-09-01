@@ -18,6 +18,22 @@ export async function publishJob(formData: FormData) {
     return { error: 'You do not have permission to post jobs for this company.' };
   }
 
+  const { data: company } = await supabase.from('companies').select('plan').eq('id', membership.company_id).single();
+  const plan = company?.plan || 'free';
+  const PLAN_LIMITS: Record<string, number> = { free: 1, starter: 5, professional: Infinity, business: Infinity, enterprise: Infinity };
+  const limit = PLAN_LIMITS[plan] ?? 1;
+
+  if (limit !== Infinity) {
+    const { count } = await supabase
+      .from('jobs')
+      .select('id', { count: 'exact', head: true })
+      .eq('company_id', membership.company_id)
+      .eq('status', 'open');
+    if ((count || 0) >= limit) {
+      return { error: `Your ${plan} plan allows up to ${limit} active job posting${limit === 1 ? '' : 's'}. Close an existing job or upgrade your plan to post another.` };
+    }
+  }
+
   const title = String(formData.get('title') || '');
   const category = String(formData.get('category') || 'retail');
   const location = String(formData.get('location') || '');
