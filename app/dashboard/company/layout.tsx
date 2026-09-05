@@ -14,6 +14,7 @@ export default function CompanyLayout({ children }: { children: React.ReactNode 
         <Link href="/dashboard/company" style={{ color: 'var(--paper)', fontSize: 13.5, opacity: 0.85 }}>Dashboard</Link>
         <Link href="/dashboard/company/new-job" style={{ color: 'var(--paper)', fontSize: 13.5, opacity: 0.85 }}>+ New job</Link>
         <Link href="/dashboard/company/billing" style={{ color: 'var(--paper)', fontSize: 13.5, opacity: 0.85 }}>Billing</Link>
+        <Link href="/dashboard/company/team" style={{ color: 'var(--paper)', fontSize: 13.5, opacity: 0.85 }}>Team</Link>
         <NotificationBell />
       </div>
       {children}
