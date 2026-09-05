@@ -32,7 +32,10 @@ function LoginForm() {
       <form action={handleSubmit}>
         <label>Email</label>
         <input name="email" type="email" required placeholder="you@example.com" />
-        <label>Password</label>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <label style={{ margin: 0 }}>Password</label>
+          <Link href="/forgot-password" style={{ fontSize: 12, color: 'var(--gold)', fontWeight: 600 }}>Forgot password?</Link>
+        </div>
         <input name="password" type="password" required placeholder="Your password" />
         <button className="btn-primary" type="submit" disabled={loading} style={{ width: '100%', marginTop: 20 }}>
           {loading ? 'Signing in…' : 'Continue'}

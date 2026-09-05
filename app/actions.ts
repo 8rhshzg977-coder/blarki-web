@@ -82,3 +82,52 @@ export async function logout() {
   await supabase.auth.signOut();
   redirect('/');
 }
+
+// Kicks off Supabase's built-in password-reset email — same delivery
+// mechanism already used for signup confirmation, so no new email
+// infrastructure is needed. Always returns the same generic success message
+// regardless of whether the address has an account, so this can't be used
+// to check who has signed up.
+export async function requestPasswordReset(formData: FormData) {
+  const email = String(formData.get('email') || '').trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[a-zA-Z]{2,}$/.test(email)) {
+    return { error: 'Enter a valid email address.' };
+  }
+
+  const supabase = createClient();
+  const headersList = headers();
+  const host = headersList.get('host');
+  const siteUrl = `https://${host}`;
+
+  // Reuses the existing /auth/confirm code-exchange route (it already knows
+  // how to follow a `next` param to a same-site destination) instead of
+  // building a second exchange handler just for this flow.
+  await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: `${siteUrl}/auth/confirm?next=${encodeURIComponent('/auth/reset-password')}`,
+  });
+
+  return { success: 'If that email has an account, a reset link is on its way — check your inbox.' };
+}
+
+// Sets a new password for the currently-signed-in user. Only reachable with
+// an active session, which by the time someone lands on
+// /auth/reset-password means they came through a valid reset-email link
+// (see the redirect chain in requestPasswordReset above and
+// app/auth/confirm/route.ts, which exchanges the email link's code for a
+// session before sending them here).
+export async function updatePassword(formData: FormData) {
+  const password = String(formData.get('password') || '');
+  if (password.length < 6) {
+    return { error: 'Password must be at least 6 characters.' };
+  }
+
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: 'This reset link has expired — request a new one.' };
+
+  const { error } = await supabase.auth.updateUser({ password });
+  if (error) return { error: 'Could not update your password — please try again.' };
+
+  const { data: profile } = await supabase.from('profiles').select('user_type').eq('id', user.id).single();
+  redirect(profile?.user_type === 'company_member' ? '/dashboard/company' : '/dashboard/applicant');
+}
