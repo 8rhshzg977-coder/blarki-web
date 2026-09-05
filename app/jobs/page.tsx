@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { CATEGORIES } from '@/lib/categories';
 import PublicNav from '@/components/PublicNav';
 import Footer from '@/components/Footer';
+import CompanyChip from '@/components/CompanyChip';
 
 export const dynamic = 'force-dynamic';
 
@@ -58,9 +59,7 @@ export default async function PublicJobsPage({ searchParams }: { searchParams: {
         {jobs?.map((job: any) => (
           <div key={job.id} className="card">
             {job.companies?.name && job.company_id && (
-              <Link href={`/companies/${job.company_id}`} style={{ fontSize: 12.5, color: 'var(--gold)', fontWeight: 600, display: 'inline-block', marginBottom: 4 }}>
-                {job.companies.name}
-              </Link>
+              <div><CompanyChip companyId={job.company_id} companyName={job.companies.name} /></div>
             )}
             <Link href={`/jobs/${job.id}`} style={{ display: 'block', textDecoration: 'none', color: 'inherit' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>

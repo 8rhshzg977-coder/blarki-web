@@ -4,6 +4,7 @@ import { CATEGORIES } from '@/lib/categories';
 import PublicNav from '@/components/PublicNav';
 import Footer from '@/components/Footer';
 import SaveJobButton from '@/components/SaveJobButton';
+import CompanyChip from '@/components/CompanyChip';
 
 export const dynamic = 'force-dynamic';
 
@@ -77,13 +78,9 @@ export default async function PublicJobPage({ params }: { params: { jobId: strin
           <Link href="/jobs" style={{ fontSize: 13, color: 'var(--slate)' }}>← Back to all jobs</Link>
         </div>
 
-        <div className="eyebrow">
-          {job.company_id ? (
-            <Link href={`/companies/${job.company_id}`} style={{ color: 'inherit' }}>{(job as any).companies?.name || 'A company on Blarki'}</Link>
-          ) : (
-            (job as any).companies?.name || 'A company on Blarki'
-          )}
-        </div>
+        {job.company_id && (job as any).companies?.name && (
+          <CompanyChip companyId={job.company_id} companyName={(job as any).companies.name} />
+        )}
         <h1 style={{ fontSize: 28, margin: '4px 0 12px' }}>{job.title}</h1>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 20 }}>
           <span className="tagpill">{CATEGORIES.find((c) => c.value === job.category)?.label || job.category}</span>

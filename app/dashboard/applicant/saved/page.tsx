@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import { CATEGORIES } from '@/lib/categories';
 import SaveJobButton from '@/components/SaveJobButton';
+import CompanyChip from '@/components/CompanyChip';
 
 export const dynamic = 'force-dynamic';
 
@@ -46,9 +47,7 @@ export default async function SavedJobsPage() {
             <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
               <div>
                 {job.companies?.name && job.company_id && (
-                  <Link href={`/companies/${job.company_id}`} style={{ fontSize: 12, color: 'var(--gold)', fontWeight: 600, display: 'inline-block', marginBottom: 2 }}>
-                    {job.companies.name}
-                  </Link>
+                  <CompanyChip companyId={job.company_id} companyName={job.companies.name} />
                 )}
                 <div style={{ fontWeight: 600 }}>{job.title}</div>
                 <div style={{ fontSize: 13, color: 'var(--slate)' }}>{job.location} · {job.pay_range || 'Pay not listed'}</div>

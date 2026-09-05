@@ -14,6 +14,7 @@ const DAILY_LIMITS: Record<string, number> = {
   parse_resume: 3,
   review_resume: 3,
   generate_job_content: 3,
+  generate_company_content: 3,
 };
 const DEFAULT_LIMIT = 3;
 
@@ -22,6 +23,13 @@ const DEFAULT_LIMIT = 3;
 // to fall back to the flat default above. `Infinity` reads as "unlimited".
 const PLAN_DAILY_LIMITS: Record<string, Record<string, number>> = {
   generate_job_content: {
+    free: 3,
+    starter: Infinity,
+    professional: Infinity,
+    business: Infinity,
+    enterprise: Infinity,
+  },
+  generate_company_content: {
     free: 3,
     starter: Infinity,
     professional: Infinity,

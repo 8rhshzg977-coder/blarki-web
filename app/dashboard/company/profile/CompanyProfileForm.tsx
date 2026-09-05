@@ -31,6 +31,10 @@ export default function CompanyProfileForm({ company }: { company: Company }) {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+  const [aiOpen, setAiOpen] = useState(false);
+  const [aiNotes, setAiNotes] = useState('');
+  const [aiGenerating, setAiGenerating] = useState(false);
+  const [aiError, setAiError] = useState('');
 
   function sanitizeFilename(filename: string) {
     return filename.replace(/[^a-zA-Z0-9.\-_]/g, '_');
@@ -83,6 +87,25 @@ export default function CompanyProfileForm({ company }: { company: Company }) {
     setMessage('Saved.');
   }
 
+  async function generateWithAi() {
+    setAiGenerating(true); setAiError('');
+    try {
+      const res = await fetch('/api/generate-company-content', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, industry, notes: aiNotes }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setAiError(data.error || 'Generation failed.'); setAiGenerating(false); return; }
+      if (data.tagline) setTagline(data.tagline);
+      if (data.description) setDescription(data.description);
+      setAiOpen(false); setAiNotes('');
+    } catch (e: any) {
+      setAiError('Generation failed — please try again.');
+    }
+    setAiGenerating(false);
+  }
+
   const busy = uploading !== null;
 
   return (
@@ -125,6 +148,35 @@ export default function CompanyProfileForm({ company }: { company: Company }) {
         <div className="card" style={{ marginBottom: 16 }}>
           <label>Company name</label>
           <input name="name" value={name} onChange={(e) => setName(e.target.value)} required />
+
+          <div style={{ margin: '10px 0 16px' }}>
+            {!aiOpen ? (
+              <button type="button" className="btn-secondary" onClick={() => setAiOpen(true)} style={{ fontSize: 12.5 }}>
+                ✨ Help me write this with AI
+              </button>
+            ) : (
+              <div style={{ background: 'var(--paper-dim)', borderRadius: 10, padding: 12 }}>
+                <label style={{ marginTop: 0, fontSize: 12 }}>Tell us about the company (optional) — what you do, what it's like to work there</label>
+                <textarea
+                  rows={3}
+                  value={aiNotes}
+                  onChange={(e) => setAiNotes(e.target.value)}
+                  placeholder="e.g. Family-owned electrical contractor, 20 years in Houston, mostly residential work, small crews, we train apprentices"
+                  style={{ fontSize: 13 }}
+                />
+                <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                  <button type="button" className="btn-gold" style={{ padding: '6px 12px', fontSize: 12.5 }} onClick={generateWithAi} disabled={aiGenerating}>
+                    {aiGenerating ? 'Writing…' : 'Generate tagline + about'}
+                  </button>
+                  <button type="button" className="btn-secondary" style={{ padding: '6px 12px', fontSize: 12.5 }} onClick={() => { setAiOpen(false); setAiError(''); }}>Cancel</button>
+                </div>
+                <div style={{ fontSize: 11, color: 'var(--slate)', marginTop: 6 }}>
+                  Fills in the tagline and description below — review and edit before saving. Based only on what's entered above and your open job postings, nothing invented.
+                </div>
+                {aiError && <div style={{ fontSize: 12, color: 'var(--rose)', marginTop: 6 }}>{aiError}</div>}
+              </div>
+            )}
+          </div>
 
           <label>Tagline</label>
           <input name="tagline" value={tagline} onChange={(e) => setTagline(e.target.value)} placeholder="A one-line description, e.g. Family-owned since 1998" maxLength={140} />
