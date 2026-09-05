@@ -119,7 +119,10 @@ export default async function CompanyDashboard() {
             <Link href={`/dashboard/company/jobs/${job.id}/applicants`} className="btn-secondary">
               View applicants ({applicationsByJob[job.id] || 0}) →
             </Link>
-            <DeleteJobButton jobId={job.id} jobTitle={job.title} />
+            <div style={{ display: 'flex', gap: 8 }}>
+              <Link href={`/dashboard/company/jobs/${job.id}/edit`} className="btn-secondary">Edit</Link>
+              <DeleteJobButton jobId={job.id} jobTitle={job.title} />
+            </div>
           </div>
         </div>
       ))}
