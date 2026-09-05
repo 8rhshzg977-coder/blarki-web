@@ -215,12 +215,19 @@ export async function respondToOffer(offerId: string, accept: boolean): Promise<
     const { data: appRow } = await supabase.from('applications').select('applicant_profiles(full_name)').eq('id', offer.application_id).single();
     const applicantName = (appRow as any)?.applicant_profiles?.full_name || 'The applicant';
     if (teamMembers?.length) {
+      // A gentle nudge toward the Team feature at the one moment it's
+      // actually relevant — right after a hire is finalized — rather than
+      // showing it on every hire regardless of role. It's just a pointer,
+      // not a requirement, since most hires won't need Blarki access at all.
+      const teamReminder = accept
+        ? ` If they'll help manage hiring, set them up with a company email, then invite them from your Team page.`
+        : '';
       await admin.from('notifications').insert(
         teamMembers.map((m: any) => ({
           user_id: m.user_id,
           type: 'offer_response',
           channel: 'in_app',
-          body: `${applicantName} ${accept ? 'accepted' : 'declined'} the offer for ${jobTitle}.`,
+          body: `${applicantName} ${accept ? 'accepted' : 'declined'} the offer for ${jobTitle}.${teamReminder}`,
           related_application_id: offer.application_id,
           read: false,
         }))
