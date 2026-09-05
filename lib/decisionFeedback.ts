@@ -13,7 +13,11 @@ export function buildDecisionFeedback(status: 'hired' | 'rejected', jobTitle: st
   if (status === 'hired') {
     const strengths = matchReasoning?.strengths?.filter(Boolean) || [];
     const highlight = strengths.length ? ` What stood out: ${strengths.slice(0, 2).join(' and ')}.` : '';
-    return `You got the job! Your application for ${jobTitle} was accepted.${highlight}`;
+    // The employer moved this straight to Hired without sending a formal
+    // offer through Blarki (that flow has its own richer "what's next"
+    // panel — see OfferCard.tsx) — still worth a next-step pointer here
+    // rather than leaving it at a bare congratulations.
+    return `You got the job! Your application for ${jobTitle} was accepted.${highlight} The employer should be in touch directly with start date and next steps — if you don't hear anything soon, it's worth reaching out to them.`;
   }
 
   const areas = matchReasoning?.areas_to_improve?.filter(Boolean) || [];

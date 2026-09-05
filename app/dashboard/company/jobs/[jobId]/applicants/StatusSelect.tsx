@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { updateApplicationStatus, scheduleInterview } from './actions';
+import { updateApplicationStatus, scheduleInterview, sendOffer } from './actions';
 
 const STAGES = [
   { value: 'applied', label: 'Applied' },
@@ -23,11 +23,20 @@ export default function StatusSelect({ applicationId, jobId, currentStatus, inte
   const [showScheduler, setShowScheduler] = useState(false);
   const [interviewDate, setInterviewDate] = useState('');
   const [interviewTime, setInterviewTime] = useState('');
+  const [showOfferForm, setShowOfferForm] = useState(false);
+  const [offerStartDate, setOfferStartDate] = useState('');
+  const [offerMessage, setOfferMessage] = useState(
+    "Welcome to the team! You'll receive onboarding paperwork (tax forms, I-9 identity verification) by email before your start date — reach out to us directly with any questions in the meantime."
+  );
   const [message, setMessage] = useState('');
 
   async function handleChange(newStatus: string) {
     if (newStatus === 'interview_requested') {
       setShowScheduler(true);
+      return;
+    }
+    if (newStatus === 'offer_sent') {
+      setShowOfferForm(true);
       return;
     }
     const previous = status;
@@ -36,6 +45,16 @@ export default function StatusSelect({ applicationId, jobId, currentStatus, inte
     const result = await updateApplicationStatus(applicationId, newStatus, jobId);
     setSaving(false);
     if (result?.error) setStatus(previous);
+  }
+
+  async function sendTheOffer() {
+    setSaving(true);
+    const result = await sendOffer(applicationId, jobId, offerStartDate, offerMessage);
+    setSaving(false);
+    if (result?.error) { setMessage(result.error); return; }
+    setStatus('offer_sent');
+    setShowOfferForm(false);
+    setMessage('Offer sent — the applicant can now accept or decline it from their dashboard.');
   }
 
   async function sendInvite() {
@@ -84,6 +103,22 @@ export default function StatusSelect({ applicationId, jobId, currentStatus, inte
               {saving ? 'Sending…' : 'Send invite'}
             </button>
             <button type="button" className="btn-secondary" style={{ padding: '5px 10px', fontSize: 12 }} onClick={() => setShowScheduler(false)}>Cancel</button>
+          </div>
+        </div>
+      )}
+
+      {showOfferForm && (
+        <div style={{ marginTop: 8, padding: 10, background: 'var(--paper-dim)', borderRadius: 8, fontSize: 12, maxWidth: 320 }}>
+          <div style={{ marginBottom: 6, fontWeight: 600 }}>Send a formal offer</div>
+          <label style={{ margin: '0 0 4px', fontSize: 11 }}>Start date (optional)</label>
+          <input type="date" value={offerStartDate} onChange={(e) => setOfferStartDate(e.target.value)} style={{ fontSize: 12, padding: 6, marginBottom: 8 }} />
+          <label style={{ margin: '0 0 4px', fontSize: 11 }}>Message to the applicant (next steps)</label>
+          <textarea rows={4} value={offerMessage} onChange={(e) => setOfferMessage(e.target.value)} style={{ fontSize: 12, padding: 8, marginBottom: 8 }} />
+          <div style={{ display: 'flex', gap: 6 }}>
+            <button type="button" className="btn-gold" style={{ padding: '5px 10px', fontSize: 12 }} onClick={sendTheOffer} disabled={saving}>
+              {saving ? 'Sending…' : 'Send offer'}
+            </button>
+            <button type="button" className="btn-secondary" style={{ padding: '5px 10px', fontSize: 12 }} onClick={() => setShowOfferForm(false)}>Cancel</button>
           </div>
         </div>
       )}

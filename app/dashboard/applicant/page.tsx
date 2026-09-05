@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 import { logout } from '@/app/actions';
 import { CATEGORIES } from '@/lib/categories';
 import InterviewInviteCard from './InterviewInviteCard';
+import OfferCard from './OfferCard';
 import ProfileCompletionCard from '@/components/ProfileCompletionCard';
 import { getProfileCompletion } from '@/lib/profileCompletion';
 import SaveJobButton from '@/components/SaveJobButton';
@@ -33,12 +34,11 @@ export default async function ApplicantDashboard({ searchParams }: { searchParam
     .eq('user_id', user.id)
     .single();
 
-  const { data: myApplications } = await supabase
-    .from('applications')
-    .select('job_id')
-    .eq('applicant_id', applicantProfile?.id);
+  const { data: myApps } = applicantProfile
+    ? await supabase.from('applications').select('id, job_id, jobs(title)').eq('applicant_id', applicantProfile.id)
+    : { data: [] as any[] };
 
-  const appliedJobIds = new Set((myApplications || []).map((a) => a.job_id));
+  const appliedJobIds = new Set((myApps || []).map((a) => a.job_id));
   const categories = CATEGORIES;
 
   const { data: savedJobs } = applicantProfile
@@ -47,20 +47,34 @@ export default async function ApplicantDashboard({ searchParams }: { searchParam
   const savedJobIds = new Set((savedJobs || []).map((s) => s.job_id));
 
   let pendingInvites: any[] = [];
-  if (applicantProfile) {
-    const { data: myApps } = await supabase.from('applications').select('id, job_id, jobs(title)').eq('applicant_id', applicantProfile.id);
-    const appIds = (myApps || []).map((a) => a.id);
-    if (appIds.length) {
-      const { data: invites } = await supabase
-        .from('interviews')
-        .select('id, confirmed_slot, application_id, confirmation_status')
-        .in('application_id', appIds)
-        .eq('confirmation_status', 'awaiting_response');
-      pendingInvites = (invites || []).map((inv) => ({
-        ...inv,
-        jobTitle: ((myApps || []).find((a) => a.id === inv.application_id)?.jobs as any)?.title || 'a role',
-      }));
-    }
+  let offerCards: any[] = [];
+  const appIds = (myApps || []).map((a) => a.id);
+  if (appIds.length) {
+    const { data: invites } = await supabase
+      .from('interviews')
+      .select('id, confirmed_slot, application_id, confirmation_status')
+      .in('application_id', appIds)
+      .eq('confirmation_status', 'awaiting_response');
+    pendingInvites = (invites || []).map((inv) => ({
+      ...inv,
+      jobTitle: ((myApps || []).find((a) => a.id === inv.application_id)?.jobs as any)?.title || 'a role',
+    }));
+
+    // Offers table may not exist yet on a database that hasn't run
+    // supabase/migrations/0004_offers.sql — fail quietly here rather than
+    // breaking the whole dashboard over a feature that hasn't been set up.
+    const { data: offers } = await supabase
+      .from('offers')
+      .select('id, application_id, start_date, message, status')
+      .in('application_id', appIds)
+      .neq('status', 'declined');
+    offerCards = (offers || []).map((o: any) => ({
+      id: o.id,
+      jobTitle: ((myApps || []).find((a) => a.id === o.application_id)?.jobs as any)?.title || 'a role',
+      startDate: o.start_date,
+      message: o.message,
+      status: o.status,
+    }));
   }
 
   return (
@@ -79,6 +93,12 @@ export default async function ApplicantDashboard({ searchParams }: { searchParam
           <Link href="/dashboard/applicant/profile" style={{ fontSize: 12.5, color: 'var(--gold)', fontWeight: 600 }}>
             Finish your profile →
           </Link>
+        </div>
+      )}
+
+      {offerCards.length > 0 && (
+        <div style={{ marginBottom: 24 }}>
+          {offerCards.map((o) => <OfferCard key={o.id} offer={o} />)}
         </div>
       )}
 

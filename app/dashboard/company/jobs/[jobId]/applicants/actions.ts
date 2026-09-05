@@ -74,6 +74,57 @@ export async function updateApplicationStatus(applicationId: string, newStatus: 
   return { success: true };
 }
 
+// Sends (or re-sends/edits, before the applicant responds) a formal offer —
+// start date + a free-text next-steps message — rather than the employer
+// just flipping a status with no detail on the applicant's side. The
+// applicant explicitly accepts or declines from their dashboard
+// (respondToOffer, in app/dashboard/applicant/actions.ts), which is what
+// actually moves the application to hired/rejected.
+export async function sendOffer(applicationId: string, jobId: string, startDate: string, message: string) {
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: 'Not authenticated' };
+
+  const { error: offerError } = await supabase
+    .from('offers')
+    .upsert(
+      { application_id: applicationId, start_date: startDate || null, message: message || null, status: 'pending', responded_at: null },
+      { onConflict: 'application_id' }
+    );
+  if (offerError) {
+    console.error('sendOffer upsert failed:', offerError);
+    if (offerError.code === '42P01' || offerError.message?.includes('does not exist')) {
+      return { error: 'Offers isn\'t set up on the database yet — run supabase/migrations/0004_offers.sql in Supabase, then try again.' };
+    }
+    return { error: 'Could not send the offer — please try again.' };
+  }
+
+  const { error: statusError } = await supabase.from('applications').update({ status: 'offer_sent' }).eq('id', applicationId);
+  if (statusError) console.error('Could not update application status:', statusError);
+
+  const { data: application } = await supabase.from('applications').select('applicant_profiles(user_id)').eq('id', applicationId).single();
+  const { data: job } = await supabase.from('jobs').select('title').eq('id', jobId).single();
+  const applicantUserId = (application as any)?.applicant_profiles?.user_id;
+  if (applicantUserId) {
+    const admin = createAdminClient();
+    const jobTitle = job?.title || 'a role';
+    const startDateText = startDate
+      ? `, starting ${new Date(`${startDate}T00:00:00`).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}`
+      : '';
+    await admin.from('notifications').insert({
+      user_id: applicantUserId,
+      type: 'offer_sent',
+      channel: 'in_app',
+      body: `You've received an offer for ${jobTitle}${startDateText}. Review the details and respond from your dashboard.`,
+      related_application_id: applicationId,
+      read: false,
+    });
+  }
+
+  revalidatePath(`/dashboard/company/jobs/${jobId}/applicants`);
+  return { success: true };
+}
+
 export async function scheduleInterview(applicationId: string, jobId: string, dateTimeIso: string) {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();

@@ -15,12 +15,21 @@ export async function toggleSavedJob(jobId: string): Promise<{ saved: boolean } 
   const { data: applicantProfile } = await supabase.from('applicant_profiles').select('id').eq('user_id', user.id).single();
   if (!applicantProfile) return { error: 'Complete your profile before saving jobs.' };
 
-  const { data: existing } = await supabase
+  const { data: existing, error: lookupError } = await supabase
     .from('saved_jobs')
     .select('id')
     .eq('applicant_id', applicantProfile.id)
     .eq('job_id', jobId)
     .maybeSingle();
+
+  // A missing-table error (undefined_table / PostgREST's "relation does not
+  // exist") means supabase/migrations/0003_saved_jobs.sql hasn't been run
+  // yet — surface that plainly instead of a generic failure, since it's
+  // the most likely cause and the fix is a one-time SQL paste, not a code
+  // problem.
+  if (lookupError?.code === '42P01' || lookupError?.message?.includes('does not exist')) {
+    return { error: 'Saved jobs isn\'t set up on the database yet — run supabase/migrations/0003_saved_jobs.sql in Supabase, then try again.' };
+  }
 
   if (existing) {
     const { error } = await supabase.from('saved_jobs').delete().eq('id', existing.id);
@@ -160,6 +169,66 @@ export async function respondToInterview(interviewId: string, accept: boolean) {
   await notifyEmployerOfResponse(supabase, interview, true);
 
   return { success: true, accepted: true, prepInfo };
+}
+
+// Accepting or declining a formal offer (see sendOffer, in the company-side
+// applicants/actions.ts) is what actually moves the application to
+// hired/rejected — an offer sitting there un-responded-to never silently
+// counts as either.
+export async function respondToOffer(offerId: string, accept: boolean): Promise<{ error: string } | { success: true; accepted: boolean }> {
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: 'Not authenticated' };
+
+  const { data: offer } = await supabase
+    .from('offers')
+    .select('id, application_id, start_date, message, applications(job_id, jobs(title, company_id))')
+    .eq('id', offerId)
+    .single();
+  if (!offer) return { error: 'Offer not found' };
+
+  const { error: offerUpdateError } = await supabase
+    .from('offers')
+    .update({ status: accept ? 'accepted' : 'declined', responded_at: new Date().toISOString() })
+    .eq('id', offerId);
+  if (offerUpdateError) {
+    console.error('respondToOffer update failed:', offerUpdateError);
+    return { error: 'Could not record your response — please try again.' };
+  }
+
+  await supabase.from('applications').update({ status: accept ? 'hired' : 'rejected' }).eq('id', offer.application_id);
+
+  const jobId = (offer as any).applications?.job_id;
+  const jobTitle = (offer as any).applications?.jobs?.title || 'the role';
+  const companyId = (offer as any).applications?.jobs?.company_id;
+
+  // Closing the job on acceptance crosses into company-owned data the
+  // applicant has no RLS access to update directly — same reasoning as the
+  // notifications writes below, so it goes through the service-role client.
+  const admin = createAdminClient();
+  if (accept && jobId) {
+    await admin.from('jobs').update({ status: 'closed', closed_reason: 'filled_by_employer' }).eq('id', jobId);
+  }
+
+  if (companyId) {
+    const { data: teamMembers } = await admin.from('company_members').select('user_id').eq('company_id', companyId).in('role', ['owner', 'hr_manager']);
+    const { data: appRow } = await supabase.from('applications').select('applicant_profiles(full_name)').eq('id', offer.application_id).single();
+    const applicantName = (appRow as any)?.applicant_profiles?.full_name || 'The applicant';
+    if (teamMembers?.length) {
+      await admin.from('notifications').insert(
+        teamMembers.map((m: any) => ({
+          user_id: m.user_id,
+          type: 'offer_response',
+          channel: 'in_app',
+          body: `${applicantName} ${accept ? 'accepted' : 'declined'} the offer for ${jobTitle}.`,
+          related_application_id: offer.application_id,
+          read: false,
+        }))
+      );
+    }
+  }
+
+  return { success: true, accepted: accept };
 }
 
 async function notifyEmployerOfResponse(supabase: any, interview: any, accepted: boolean) {
