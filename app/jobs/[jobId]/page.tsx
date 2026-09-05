@@ -15,7 +15,7 @@ export default async function PublicJobPage({ params }: { params: { jobId: strin
 
   const { data: job } = await supabase
     .from('jobs')
-    .select('id, title, category, location, pay_range, description, closes_at, status, companies(name)')
+    .select('id, title, category, location, pay_range, description, closes_at, status, company_id, companies(name)')
     .eq('id', params.jobId)
     .maybeSingle();
 
@@ -77,7 +77,13 @@ export default async function PublicJobPage({ params }: { params: { jobId: strin
           <Link href="/jobs" style={{ fontSize: 13, color: 'var(--slate)' }}>← Back to all jobs</Link>
         </div>
 
-        <div className="eyebrow">{(job as any).companies?.name || 'A company on Blarki'}</div>
+        <div className="eyebrow">
+          {job.company_id ? (
+            <Link href={`/companies/${job.company_id}`} style={{ color: 'inherit' }}>{(job as any).companies?.name || 'A company on Blarki'}</Link>
+          ) : (
+            (job as any).companies?.name || 'A company on Blarki'
+          )}
+        </div>
         <h1 style={{ fontSize: 28, margin: '4px 0 12px' }}>{job.title}</h1>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 20 }}>
           <span className="tagpill">{CATEGORIES.find((c) => c.value === job.category)?.label || job.category}</span>
