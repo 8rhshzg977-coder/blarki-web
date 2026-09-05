@@ -4,6 +4,9 @@ import { createClient } from '@/lib/supabase/server';
 import { logout } from '@/app/actions';
 import { CATEGORIES } from '@/lib/categories';
 import InterviewInviteCard from './InterviewInviteCard';
+import ProfileCompletionCard from '@/components/ProfileCompletionCard';
+import { getProfileCompletion } from '@/lib/profileCompletion';
+import SaveJobButton from '@/components/SaveJobButton';
 
 export const dynamic = 'force-dynamic';
 
@@ -24,15 +27,25 @@ export default async function ApplicantDashboard({ searchParams }: { searchParam
 
   const { data: jobs } = await query;
 
+  const { data: applicantProfile } = await supabase
+    .from('applicant_profiles')
+    .select('id, full_name, resume_text, resume_url, skills, bio, location, portfolio_url, linkedin_url, availability')
+    .eq('user_id', user.id)
+    .single();
+
   const { data: myApplications } = await supabase
     .from('applications')
     .select('job_id')
-    .eq('applicant_id', (await supabase.from('applicant_profiles').select('id').eq('user_id', user.id).single()).data?.id);
+    .eq('applicant_id', applicantProfile?.id);
 
   const appliedJobIds = new Set((myApplications || []).map((a) => a.job_id));
   const categories = CATEGORIES;
 
-  const { data: applicantProfile } = await supabase.from('applicant_profiles').select('id').eq('user_id', user.id).single();
+  const { data: savedJobs } = applicantProfile
+    ? await supabase.from('saved_jobs').select('job_id').eq('applicant_id', applicantProfile.id)
+    : { data: [] as any[] };
+  const savedJobIds = new Set((savedJobs || []).map((s) => s.job_id));
+
   let pendingInvites: any[] = [];
   if (applicantProfile) {
     const { data: myApps } = await supabase.from('applications').select('id, job_id, jobs(title)').eq('applicant_id', applicantProfile.id);
@@ -59,6 +72,15 @@ export default async function ApplicantDashboard({ searchParams }: { searchParam
         </div>
         <form action={logout}><button className="btn-secondary" type="submit">Sign out</button></form>
       </div>
+
+      {getProfileCompletion(applicantProfile).percent < 100 && (
+        <div style={{ marginBottom: 24 }}>
+          <ProfileCompletionCard profile={applicantProfile} />
+          <Link href="/dashboard/applicant/profile" style={{ fontSize: 12.5, color: 'var(--gold)', fontWeight: 600 }}>
+            Finish your profile →
+          </Link>
+        </div>
+      )}
 
       {pendingInvites.length > 0 && (
         <div style={{ marginBottom: 24 }}>
@@ -92,13 +114,14 @@ export default async function ApplicantDashboard({ searchParams }: { searchParam
             <span className="tagpill">{CATEGORIES.find((c) => c.value === job.category)?.label || job.category}</span>
           </div>
           <p style={{ fontSize: 13, color: 'var(--ink-soft)', marginTop: 8 }}>{job.description?.slice(0, 180)}…</p>
-          {appliedJobIds.has(job.id) ? (
-            <span className="tagpill" style={{ background: 'var(--teal-soft)', color: 'var(--teal)' }}>Applied</span>
-          ) : (
-            <Link href={`/dashboard/applicant/apply/${job.id}`} className="btn-gold" style={{ marginTop: 10, display: 'inline-block' }}>
-              Apply — AI screening
-            </Link>
-          )}
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 10 }}>
+            {appliedJobIds.has(job.id) ? (
+              <span className="tagpill" style={{ background: 'var(--teal-soft)', color: 'var(--teal)' }}>Applied</span>
+            ) : (
+              <Link href={`/dashboard/applicant/apply/${job.id}`} className="btn-gold">Apply — AI screening</Link>
+            )}
+            <SaveJobButton jobId={job.id} initiallySaved={savedJobIds.has(job.id)} />
+          </div>
         </div>
       ))}
     </div>

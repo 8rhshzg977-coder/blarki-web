@@ -1,12 +1,30 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import UpgradeButton from './UpgradeButton';
+import ManageBillingButton from './ManageBillingButton';
 
 export const dynamic = 'force-dynamic';
 
 const PLANS = [
-  { key: 'free', name: 'Free', price: '$0/mo', features: ['1 active job posting', 'Basic AI job description', 'Up to 20 applicants', 'Basic dashboard'] },
-  { key: 'starter', name: 'Starter', price: '$39/mo', features: ['Up to 5 active jobs', 'AI descriptions & screening questions', 'AI applicant ranking', 'Resume analysis', 'Email support'] },
+  {
+    key: 'free', name: 'Free', price: '$0/mo',
+    features: [
+      '1 active job posting',
+      'AI job description generator — 3 per day',
+      'Applicants shown in the order they applied',
+      'Basic dashboard',
+    ],
+  },
+  {
+    key: 'starter', name: 'Starter', price: '$39/mo',
+    features: [
+      'Up to 5 active jobs',
+      'Unlimited AI job description & screening-question generation',
+      'AI applicant ranking — every applicant scored & explained',
+      'AI resume-fit summary for every applicant',
+      'Email support',
+    ],
+  },
 ];
 
 export default async function BillingPage({ searchParams }: { searchParams: { success?: string; cancelled?: string } }) {
@@ -16,11 +34,12 @@ export default async function BillingPage({ searchParams }: { searchParams: { su
 
   const { data: membership } = await supabase
     .from('company_members')
-    .select('role, companies(plan)')
+    .select('role, companies(plan, billing_customer_id)')
     .eq('user_id', user.id)
     .maybeSingle();
 
   const currentPlan = (membership as any)?.companies?.plan || 'free';
+  const hasBillingAccount = Boolean((membership as any)?.companies?.billing_customer_id);
   const isOwner = membership?.role === 'owner';
 
   return (
@@ -48,7 +67,10 @@ export default async function BillingPage({ searchParams }: { searchParams: { su
               <div className="num" style={{ fontSize: 20, color: 'var(--gold-deep)', marginTop: 4 }}>{plan.price}</div>
             </div>
             {currentPlan === plan.key ? (
-              <span className="tagpill" style={{ background: 'var(--teal-soft)', color: 'var(--teal)' }}>Current plan</span>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-end' }}>
+                <span className="tagpill" style={{ background: 'var(--teal-soft)', color: 'var(--teal)' }}>Current plan</span>
+                {plan.key !== 'free' && isOwner && hasBillingAccount && <ManageBillingButton />}
+              </div>
             ) : plan.key !== 'free' && isOwner ? (
               <UpgradeButton plan={plan.key} />
             ) : null}
@@ -60,7 +82,8 @@ export default async function BillingPage({ searchParams }: { searchParams: { su
       ))}
 
       <p style={{ fontSize: 12, color: 'var(--slate)', marginTop: 16 }}>
-        Payments are processed securely by Stripe. You can cancel anytime from the same checkout portal.
+        Payments are processed securely by Stripe. Once you&apos;ve upgraded, use &quot;Manage billing / cancel&quot;
+        above to update your payment method, downgrade, or cancel anytime — no need to contact support.
       </p>
     </div>
   );

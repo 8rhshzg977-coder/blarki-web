@@ -23,9 +23,17 @@ export async function POST(req: Request) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
 
-  const { allowed } = await checkAndLogAiUsage(user.id, 'generate_job_content');
+  const { data: membership } = await supabase
+    .from('company_members')
+    .select('companies(plan)')
+    .eq('user_id', user.id)
+    .maybeSingle();
+  const plan = (membership as any)?.companies?.plan || 'free';
+
+  const { allowed } = await checkAndLogAiUsage(user.id, 'generate_job_content', plan);
   if (!allowed) {
-    return NextResponse.json({ error: "You've reached today's limit for AI job generation. It resets at midnight — try again tomorrow, or write this one manually for now." }, { status: 429 });
+    const upgradeHint = plan === 'free' ? ' Upgrade to Starter for unlimited AI job generation.' : '';
+    return NextResponse.json({ error: `You've reached today's limit for AI job generation.${upgradeHint} It resets at midnight — try again tomorrow, or write this one manually for now.` }, { status: 429 });
   }
 
   const { title, category, location, payRange, requirements, context } = await req.json();

@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import { CATEGORIES } from '@/lib/categories';
 import PublicNav from '@/components/PublicNav';
+import Footer from '@/components/Footer';
 
 export const dynamic = 'force-dynamic';
 
@@ -69,6 +70,7 @@ export default async function PublicJobsPage({ searchParams }: { searchParams: {
           </Link>
         ))}
       </div>
+      <Footer />
     </div>
   );
 }

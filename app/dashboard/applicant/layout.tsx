@@ -12,6 +12,7 @@ export default function ApplicantLayout({ children }: { children: React.ReactNod
       }}>
         <span style={{ fontFamily: "'Instrument Serif', serif", fontSize: 19, letterSpacing: '0.01em' }}>Blarki</span>
         <Link href="/dashboard/applicant" style={{ color: 'var(--paper)', fontSize: 13.5, opacity: 0.85 }}>Find jobs</Link>
+        <Link href="/dashboard/applicant/saved" style={{ color: 'var(--paper)', fontSize: 13.5, opacity: 0.85 }}>Saved jobs</Link>
         <Link href="/dashboard/applicant/profile" style={{ color: 'var(--paper)', fontSize: 13.5, opacity: 0.85 }}>My profile</Link>
         <NotificationBell />
       </div>

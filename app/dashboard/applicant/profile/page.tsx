@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { saveApplicantProfile } from './actions';
+import ProfileCompletionCard from '@/components/ProfileCompletionCard';
 
 const SALARY_RANGES = [
   { value: '', label: 'Prefer not to say' },
@@ -225,6 +226,8 @@ export default function ApplicantProfilePage() {
     <div className="container" style={{ maxWidth: 640 }}>
       <div className="eyebrow">MY PROFILE</div>
       <h1 style={{ fontSize: 26, margin: '8px 0 20px' }}>Profile &amp; resume</h1>
+
+      <ProfileCompletionCard profile={{ ...profile, skills: skillsList }} />
 
       <div className="card">
         <div className="eyebrow" style={{ marginBottom: 8 }}>RESUME</div>

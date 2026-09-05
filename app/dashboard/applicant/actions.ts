@@ -3,6 +3,37 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { revalidatePath } from 'next/cache';
+
+// Toggles a bookmark on a job for the current applicant. Returns the new
+// saved state so the button calling it doesn't need a separate read.
+export async function toggleSavedJob(jobId: string): Promise<{ saved: boolean } | { error: string }> {
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: 'Not authenticated' };
+
+  const { data: applicantProfile } = await supabase.from('applicant_profiles').select('id').eq('user_id', user.id).single();
+  if (!applicantProfile) return { error: 'Complete your profile before saving jobs.' };
+
+  const { data: existing } = await supabase
+    .from('saved_jobs')
+    .select('id')
+    .eq('applicant_id', applicantProfile.id)
+    .eq('job_id', jobId)
+    .maybeSingle();
+
+  if (existing) {
+    const { error } = await supabase.from('saved_jobs').delete().eq('id', existing.id);
+    if (error) return { error: 'Could not unsave this job — please try again.' };
+    revalidatePath('/dashboard/applicant/saved');
+    return { saved: false };
+  }
+
+  const { error } = await supabase.from('saved_jobs').insert({ applicant_id: applicantProfile.id, job_id: jobId });
+  if (error) return { error: 'Could not save this job — please try again.' };
+  revalidatePath('/dashboard/applicant/saved');
+  return { saved: true };
+}
 
 export async function submitApplication(formData: FormData) {
   const supabase = createClient();

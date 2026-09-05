@@ -13,7 +13,7 @@ export default async function ApplicantsPage({ params }: { params: { jobId: stri
 
   const { data: job } = await supabase
     .from('jobs')
-    .select('id, title, location, company_id')
+    .select('id, title, location, company_id, companies(plan)')
     .eq('id', params.jobId)
     .single();
 
@@ -27,11 +27,17 @@ export default async function ApplicantsPage({ params }: { params: { jobId: stri
     .maybeSingle();
   if (!membership) return <div className="container">You don&apos;t have access to this job.</div>;
 
-  const { data: applications } = await supabase
+  const plan = (job as any).companies?.plan || 'free';
+  const aiRankingEnabled = plan !== 'free';
+
+  let applicationsQuery = supabase
     .from('applications')
     .select('id, status, match_score, match_reasoning, ai_summary, created_at, applicant_profiles(full_name, skills, resume_text, resume_url)')
-    .eq('job_id', params.jobId)
-    .order('match_score', { ascending: false, nullsFirst: false });
+    .eq('job_id', params.jobId);
+  applicationsQuery = aiRankingEnabled
+    ? applicationsQuery.order('match_score', { ascending: false, nullsFirst: false })
+    : applicationsQuery.order('created_at', { ascending: true });
+  const { data: applications } = await applicationsQuery;
 
   const appIds = (applications || []).map((a) => a.id);
   const { data: interviews } = appIds.length
@@ -46,8 +52,22 @@ export default async function ApplicantsPage({ params }: { params: { jobId: stri
         <Link href="/dashboard/company" style={{ fontSize: 13, color: 'var(--slate)' }}>← Back to dashboard</Link>
         <div className="eyebrow" style={{ marginTop: 10 }}>{job.location}</div>
         <h1 style={{ fontSize: 24, margin: '4px 0' }}>Applicants — {job.title}</h1>
-        <p style={{ fontSize: 13, color: 'var(--slate)' }}>Ranked by AI match score, highest first.</p>
+        <p style={{ fontSize: 13, color: 'var(--slate)' }}>
+          {aiRankingEnabled ? 'Ranked by AI match score, highest first.' : 'Shown in the order they applied.'}
+        </p>
       </div>
+
+      {!aiRankingEnabled && (
+        <div className="card" style={{ background: 'var(--gold-soft)', borderColor: 'var(--gold)' }}>
+          <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 4 }}>AI applicant ranking is a Starter feature</div>
+          <p style={{ fontSize: 13, color: 'var(--ink-soft)', marginBottom: 10 }}>
+            On the Free plan, applicants show up in the order they applied — no AI match score, summary, or
+            strengths/areas-to-improve breakdown. Upgrade to have every applicant automatically scored and
+            explained against this job's requirements.
+          </p>
+          <Link href="/dashboard/company/billing" className="btn-gold">Upgrade to Starter</Link>
+        </div>
+      )}
 
       {(!applications || applications.length === 0) && (
         <div className="card" style={{ textAlign: 'center', color: 'var(--slate)' }}>
@@ -65,17 +85,19 @@ export default async function ApplicantsPage({ params }: { params: { jobId: stri
                 <div style={{ fontWeight: 600, fontSize: 15 }}>#{i + 1} — {profile?.full_name || 'Unnamed applicant'}</div>
                 <StatusSelect applicationId={app.id} jobId={job.id} currentStatus={app.status} interview={interviewByApp[app.id] || null} />
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <ScoreRing score={score} />
-                <div style={{ fontSize: 11, color: 'var(--slate)', maxWidth: 60 }}>{score == null ? 'scoring…' : 'match score'}</div>
-              </div>
+              {aiRankingEnabled && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <ScoreRing score={score} />
+                  <div style={{ fontSize: 11, color: 'var(--slate)', maxWidth: 60 }}>{score == null ? 'scoring…' : 'match score'}</div>
+                </div>
+              )}
             </div>
 
-            {app.ai_summary && (
+            {aiRankingEnabled && app.ai_summary && (
               <p style={{ fontSize: 13, color: 'var(--ink-soft)', marginTop: 10, lineHeight: 1.6 }}>{app.ai_summary}</p>
             )}
 
-            {app.match_reasoning && (
+            {aiRankingEnabled && app.match_reasoning && (
               <div style={{ marginTop: 12, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 <div>
                   <div className="eyebrow" style={{ marginBottom: 4, color: 'var(--teal)' }}>STRENGTHS</div>

@@ -51,6 +51,10 @@ function SignupForm() {
         <button className="btn-primary" type="submit" disabled={loading} style={{ width: '100%', marginTop: 20 }}>
           {loading ? 'Creating account…' : 'Create account'}
         </button>
+        <p style={{ fontSize: 11.5, color: 'var(--slate)', marginTop: 12, textAlign: 'center' }}>
+          By creating an account you agree to our <Link href="/legal/terms" style={{ color: 'var(--slate)' }}>Terms</Link> and{' '}
+          <Link href="/legal/privacy" style={{ color: 'var(--slate)' }}>Privacy Policy</Link>.
+        </p>
       </form>
 
       {error && <div className="error-box">{error}</div>}

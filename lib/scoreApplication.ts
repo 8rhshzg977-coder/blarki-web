@@ -5,6 +5,12 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 // auth-forwarding problem) and by the /api/score-application route (for any
 // future client-triggered re-scoring). Strictly job-related signal only,
 // per PRD Part V — see the system prompt below for the full rule set.
+//
+// AI ranking is gated to paid plans (Starter+) — this is the app's flagship
+// AI feature and its own pricing page already promises it as a Starter
+// perk, so a Free-plan company skips the Anthropic call entirely rather
+// than getting the same result as a paying one for free. Returns
+// { skipped: true } instead of scoring when the company is on the Free plan.
 export async function scoreApplication(supabase: SupabaseClient, applicationId: string) {
   const { data: application } = await supabase
     .from('applications')
@@ -15,9 +21,14 @@ export async function scoreApplication(supabase: SupabaseClient, applicationId: 
 
   const { data: job } = await supabase
     .from('jobs')
-    .select('title, description, requirements, skills')
+    .select('title, description, requirements, skills, companies(plan)')
     .eq('id', application.job_id)
     .single();
+
+  const plan = (job as any)?.companies?.plan || 'free';
+  if (plan === 'free') {
+    return { skipped: true, reason: 'AI applicant ranking is a Starter-plan feature.' };
+  }
 
   const { data: applicant } = await supabase
     .from('applicant_profiles')

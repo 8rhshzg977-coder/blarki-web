@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { buildDecisionFeedback } from '@/lib/decisionFeedback';
 
 const VALID_STATUSES = [
   'applied', 'ai_resume_review', 'recruiter_review', 'hiring_manager_review',
@@ -42,21 +43,28 @@ export async function updateApplicationStatus(applicationId: string, newStatus: 
     await supabase.from('jobs').update({ status: 'closed', closed_reason: 'filled_by_employer' }).eq('id', jobId);
   }
 
-  // Notify the applicant of the status change.
+  // Notify the applicant of the status change. On a final decision
+  // (hired/rejected), prefer specific AI-grounded feedback over the
+  // generic status label — see lib/decisionFeedback.ts for why this isn't
+  // optional per the product's own hiring-feedback requirement.
   const { data: application } = await supabase
     .from('applications')
-    .select('applicant_profiles(user_id)')
+    .select('applicant_profiles(user_id), match_reasoning')
     .eq('id', applicationId)
     .single();
   const { data: job } = await supabase.from('jobs').select('title').eq('id', jobId).single();
   const applicantUserId = (application as any)?.applicant_profiles?.user_id;
   if (applicantUserId) {
     const admin = createAdminClient();
+    const jobTitle = job?.title || 'a role';
+    const decisionFeedback = (newStatus === 'hired' || newStatus === 'rejected')
+      ? buildDecisionFeedback(newStatus, jobTitle, (application as any)?.match_reasoning)
+      : null;
     await admin.from('notifications').insert({
       user_id: applicantUserId,
       type: 'status_change',
       channel: 'in_app',
-      body: `Your application for ${job?.title || 'a role'} is now ${STATUS_LABELS[newStatus] || newStatus}.`,
+      body: decisionFeedback || `Your application for ${jobTitle} is now ${STATUS_LABELS[newStatus] || newStatus}.`,
       related_application_id: applicationId,
       read: false,
     });

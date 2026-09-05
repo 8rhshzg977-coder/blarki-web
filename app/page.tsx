@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 import { ensureProfileExists } from '@/lib/ensureProfileExists';
 import ScoreRing from '@/components/ScoreRing';
 import PublicNav from '@/components/PublicNav';
+import Footer from '@/components/Footer';
 
 export const dynamic = 'force-dynamic';
 
@@ -99,6 +100,7 @@ export default async function Home({ searchParams }: { searchParams: { code?: st
           </div>
         </div>
       </div>
+      <Footer />
     </div>
   );
 }

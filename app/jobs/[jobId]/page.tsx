@@ -2,6 +2,8 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import { CATEGORIES } from '@/lib/categories';
 import PublicNav from '@/components/PublicNav';
+import Footer from '@/components/Footer';
+import SaveJobButton from '@/components/SaveJobButton';
 
 export const dynamic = 'force-dynamic';
 
@@ -28,6 +30,7 @@ export default async function PublicJobPage({ params }: { params: { jobId: strin
           </p>
           <Link href="/jobs" className="btn-gold">Browse open jobs</Link>
         </div>
+        <Footer />
       </div>
     );
   }
@@ -43,6 +46,8 @@ export default async function PublicJobPage({ params }: { params: { jobId: strin
     </p>
   );
 
+  let saveButton = <></>;
+
   if (user) {
     const { data: profile } = await supabase.from('profiles').select('user_type').eq('id', user.id).single();
     if (profile?.user_type === 'company_member') {
@@ -57,6 +62,10 @@ export default async function PublicJobPage({ params }: { params: { jobId: strin
         ? <span className="tagpill" style={{ background: 'var(--teal-soft)', color: 'var(--teal)' }}>You&apos;ve already applied</span>
         : <Link href={applyPath} className="btn-gold">Apply — AI screening</Link>;
       signInHint = <></>;
+      if (applicantProfile) {
+        const { data: existingSave } = await supabase.from('saved_jobs').select('id').eq('job_id', job.id).eq('applicant_id', applicantProfile.id).maybeSingle();
+        saveButton = <SaveJobButton jobId={job.id} initiallySaved={Boolean(existingSave)} />;
+      }
     }
   }
 
@@ -81,11 +90,13 @@ export default async function PublicJobPage({ params }: { params: { jobId: strin
           <p style={{ fontSize: 14.5, color: 'var(--ink-soft)', lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>{job.description}</p>
         </div>
 
-        <div style={{ marginTop: 20 }}>
+        <div style={{ marginTop: 20, display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
           {cta}
-          {signInHint}
+          {saveButton}
         </div>
+        {signInHint}
       </div>
+      <Footer />
     </div>
   );
 }
