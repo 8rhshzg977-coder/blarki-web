@@ -5,11 +5,20 @@ import { headers } from 'next/headers';
 import { createClient } from '@/lib/supabase/server';
 import { ensureProfileExists } from '@/lib/ensureProfileExists';
 
+// Only ever follow a same-site relative path (e.g. from ?redirect=/jobs/123)
+// — never an absolute URL — so this can't be turned into an open redirect.
+function safeRedirectPath(value: FormDataEntryValue | null): string | null {
+  const path = typeof value === 'string' ? value.trim() : '';
+  if (!path || !path.startsWith('/') || path.startsWith('//')) return null;
+  return path;
+}
+
 export async function signup(formData: FormData) {
   const email = String(formData.get('email') || '').trim().toLowerCase();
   const password = String(formData.get('password') || '');
   const name = String(formData.get('name') || '').trim();
   const role = String(formData.get('role') || 'applicant');
+  const redirectTo = safeRedirectPath(formData.get('redirect'));
 
   if (!/^[^\s@]+@[^\s@]+\.[a-zA-Z]{2,}$/.test(email)) {
     return { error: 'Enter a valid email address.' };
@@ -31,7 +40,7 @@ export async function signup(formData: FormData) {
     password,
     options: {
       data: { user_type: role === 'company' ? 'company_member' : 'applicant', name },
-      emailRedirectTo: `${siteUrl}/auth/confirm`,
+      emailRedirectTo: `${siteUrl}/auth/confirm${redirectTo ? `?next=${encodeURIComponent(redirectTo)}` : ''}`,
     },
   });
 
@@ -42,7 +51,7 @@ export async function signup(formData: FormData) {
   // on their first real login instead (see login() below).
   if (data.session && data.user) {
     await ensureProfileExists(supabase, data.user);
-    redirect(role === 'company' ? '/dashboard/company' : '/dashboard/applicant');
+    redirect(redirectTo || (role === 'company' ? '/dashboard/company' : '/dashboard/applicant'));
   }
 
   return { success: 'Check your email to confirm your account, then sign in.' };
@@ -51,6 +60,7 @@ export async function signup(formData: FormData) {
 export async function login(formData: FormData) {
   const email = String(formData.get('email') || '').trim().toLowerCase();
   const password = String(formData.get('password') || '');
+  const redirectTo = safeRedirectPath(formData.get('redirect'));
 
   const supabase = createClient();
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
@@ -63,7 +73,7 @@ export async function login(formData: FormData) {
       .select('user_type')
       .eq('id', data.user.id)
       .single();
-    redirect(profile?.user_type === 'company_member' ? '/dashboard/company' : '/dashboard/applicant');
+    redirect(redirectTo || (profile?.user_type === 'company_member' ? '/dashboard/company' : '/dashboard/applicant'));
   }
 }
 

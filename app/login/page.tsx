@@ -17,6 +17,8 @@ function LoginForm() {
 
   async function handleSubmit(formData: FormData) {
     setError(''); setLoading(true);
+    const redirectTo = searchParams.get('redirect');
+    if (redirectTo) formData.set('redirect', redirectTo);
     const result = await login(formData);
     setLoading(false);
     if (result?.error) setError(result.error);
@@ -40,7 +42,7 @@ function LoginForm() {
       {error && <div className="error-box">{error}</div>}
 
       <p style={{ marginTop: 20, fontSize: 13, color: 'var(--slate)' }}>
-        No account yet? <Link href="/signup" style={{ color: 'var(--gold)', fontWeight: 600 }}>Create one</Link>
+        No account yet? <Link href={searchParams.get('redirect') ? `/signup?redirect=${encodeURIComponent(searchParams.get('redirect')!)}` : '/signup'} style={{ color: 'var(--gold)', fontWeight: 600 }}>Create one</Link>
       </p>
     </div>
   );

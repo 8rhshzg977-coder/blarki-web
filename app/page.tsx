@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { ensureProfileExists } from '@/lib/ensureProfileExists';
 import ScoreRing from '@/components/ScoreRing';
+import PublicNav from '@/components/PublicNav';
 
 export const dynamic = 'force-dynamic';
 
@@ -35,6 +36,7 @@ export default async function Home({ searchParams }: { searchParams: { code?: st
 
   return (
     <div>
+      <PublicNav />
       <div style={{ background: 'var(--ink)', color: 'var(--paper)', padding: '70px 28px 90px' }}>
         <div style={{ maxWidth: 640, margin: '0 auto', textAlign: 'center' }}>
           <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 28 }}>
@@ -56,7 +58,10 @@ export default async function Home({ searchParams }: { searchParams: { code?: st
             <Link href="/signup?role=company" className="btn-gold">I&apos;m hiring</Link>
             <Link href="/signup?role=applicant" className="btn-secondary" style={{ borderColor: 'rgba(246,245,241,0.3)', color: 'var(--paper)' }}>I&apos;m job hunting</Link>
           </div>
-          <p style={{ marginTop: 26, fontSize: 13, color: '#8A94A0' }}>
+          <p style={{ marginTop: 20, fontSize: 13, color: '#8A94A0' }}>
+            Just looking? <Link href="/jobs" style={{ color: 'var(--gold)', fontWeight: 600 }}>Browse open jobs</Link> — no account needed.
+          </p>
+          <p style={{ marginTop: 10, fontSize: 13, color: '#8A94A0' }}>
             Already have an account? <Link href="/login" style={{ color: 'var(--gold)', fontWeight: 600 }}>Sign in</Link>
           </p>
         </div>

@@ -15,6 +15,8 @@ function SignupForm() {
   async function handleSubmit(formData: FormData) {
     setError(''); setSuccess(''); setLoading(true);
     formData.set('role', role);
+    const redirectTo = searchParams.get('redirect');
+    if (redirectTo) formData.set('redirect', redirectTo);
     const result = await signup(formData);
     setLoading(false);
     if (result?.error) setError(result.error);
@@ -55,7 +57,7 @@ function SignupForm() {
       {success && <div className="error-box" style={{ background: 'var(--teal-soft)', color: 'var(--teal)' }}>{success}</div>}
 
       <p style={{ marginTop: 20, fontSize: 13, color: 'var(--slate)' }}>
-        Already have an account? <Link href="/login" style={{ color: 'var(--gold)', fontWeight: 600 }}>Sign in</Link>
+        Already have an account? <Link href={searchParams.get('redirect') ? `/login?redirect=${encodeURIComponent(searchParams.get('redirect')!)}` : '/login'} style={{ color: 'var(--gold)', fontWeight: 600 }}>Sign in</Link>
       </p>
     </div>
   );

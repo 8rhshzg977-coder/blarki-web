@@ -2,14 +2,16 @@ import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 
-export default async function ConfirmedPage() {
+export default async function ConfirmedPage({ searchParams }: { searchParams: { next?: string } }) {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
   let destination = '/login';
   if (user) {
     const { data: profile } = await supabase.from('profiles').select('user_type').eq('id', user.id).single();
-    destination = profile?.user_type === 'company_member' ? '/dashboard/company' : '/dashboard/applicant';
+    const roleDefault = profile?.user_type === 'company_member' ? '/dashboard/company' : '/dashboard/applicant';
+    const next = searchParams.next;
+    destination = next && next.startsWith('/') && !next.startsWith('//') ? next : roleDefault;
   }
 
   return (

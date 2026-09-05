@@ -10,6 +10,12 @@ import { ensureProfileExists } from '@/lib/ensureProfileExists';
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get('code');
+  // Carries a same-site destination through email confirmation (e.g. someone
+  // who found a job posting, signed up, and should land back on that job's
+  // apply page instead of the generic dashboard) — see signup() in
+  // app/actions.ts, which sets this via emailRedirectTo.
+  const next = searchParams.get('next');
+  const nextParam = next && next.startsWith('/') && !next.startsWith('//') ? `?next=${encodeURIComponent(next)}` : '';
 
   if (!code) {
     return NextResponse.redirect(`${origin}/login?error=Confirmation+link+is+missing+or+invalid`);
@@ -24,5 +30,5 @@ export async function GET(request: Request) {
 
   await ensureProfileExists(supabase, data.user);
 
-  return NextResponse.redirect(`${origin}/auth/confirmed`);
+  return NextResponse.redirect(`${origin}/auth/confirmed${nextParam}`);
 }
