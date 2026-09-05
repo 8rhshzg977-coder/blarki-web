@@ -16,7 +16,7 @@ export default async function PublicJobsPage({ searchParams }: { searchParams: {
 
   let query = supabase
     .from('jobs')
-    .select('id, title, category, location, pay_range, description, closes_at, companies(name)')
+    .select('id, title, category, location, pay_range, description, closes_at, company_id, companies(name)')
     .eq('status', 'open')
     .or(`closes_at.is.null,closes_at.gte.${new Date().toISOString().slice(0, 10)}`)
     .order('created_at', { ascending: false })
@@ -56,18 +56,23 @@ export default async function PublicJobsPage({ searchParams }: { searchParams: {
         )}
 
         {jobs?.map((job: any) => (
-          <Link key={job.id} href={`/jobs/${job.id}`} className="card" style={{ display: 'block', textDecoration: 'none' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
-              <div>
-                <div style={{ fontWeight: 600 }}>{job.title}</div>
-                <div style={{ fontSize: 13, color: 'var(--slate)' }}>
-                  {job.companies?.name ? `${job.companies.name} · ` : ''}{job.location} · {job.pay_range || 'Pay not listed'}
+          <div key={job.id} className="card">
+            {job.companies?.name && job.company_id && (
+              <Link href={`/companies/${job.company_id}`} style={{ fontSize: 12.5, color: 'var(--gold)', fontWeight: 600, display: 'inline-block', marginBottom: 4 }}>
+                {job.companies.name}
+              </Link>
+            )}
+            <Link href={`/jobs/${job.id}`} style={{ display: 'block', textDecoration: 'none', color: 'inherit' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
+                <div>
+                  <div style={{ fontWeight: 600 }}>{job.title}</div>
+                  <div style={{ fontSize: 13, color: 'var(--slate)' }}>{job.location} · {job.pay_range || 'Pay not listed'}</div>
                 </div>
+                <span className="tagpill">{CATEGORIES.find((c) => c.value === job.category)?.label || job.category}</span>
               </div>
-              <span className="tagpill">{CATEGORIES.find((c) => c.value === job.category)?.label || job.category}</span>
-            </div>
-            <p style={{ fontSize: 13, color: 'var(--ink-soft)', marginTop: 8 }}>{job.description?.slice(0, 180)}…</p>
-          </Link>
+              <p style={{ fontSize: 13, color: 'var(--ink-soft)', marginTop: 8 }}>{job.description?.slice(0, 180)}…</p>
+            </Link>
+          </div>
         ))}
       </div>
       <Footer />

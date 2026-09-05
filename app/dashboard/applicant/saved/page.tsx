@@ -16,7 +16,7 @@ export default async function SavedJobsPage() {
   const { data: saved } = applicantProfile
     ? await supabase
         .from('saved_jobs')
-        .select('job_id, created_at, jobs(id, title, category, location, pay_range, description, status, closes_at)')
+        .select('job_id, created_at, jobs(id, title, category, location, pay_range, description, status, closes_at, company_id, companies(name))')
         .eq('applicant_id', applicantProfile.id)
         .order('created_at', { ascending: false })
     : { data: [] as any[] };
@@ -45,6 +45,11 @@ export default async function SavedJobsPage() {
           <div key={s.job_id} className="card">
             <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
               <div>
+                {job.companies?.name && job.company_id && (
+                  <Link href={`/companies/${job.company_id}`} style={{ fontSize: 12, color: 'var(--gold)', fontWeight: 600, display: 'inline-block', marginBottom: 2 }}>
+                    {job.companies.name}
+                  </Link>
+                )}
                 <div style={{ fontWeight: 600 }}>{job.title}</div>
                 <div style={{ fontSize: 13, color: 'var(--slate)' }}>{job.location} · {job.pay_range || 'Pay not listed'}</div>
               </div>

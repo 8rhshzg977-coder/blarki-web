@@ -13,6 +13,7 @@ export default function PublicNav() {
         Blarki
       </Link>
       <Link href="/jobs" style={{ color: 'var(--paper)', fontSize: 13.5, opacity: 0.85 }}>Browse jobs</Link>
+      <Link href="/companies" style={{ color: 'var(--paper)', fontSize: 13.5, opacity: 0.85 }}>Companies</Link>
       <div style={{ flex: 1 }} />
       <Link href="/login" style={{ color: 'var(--paper)', fontSize: 13.5, opacity: 0.85 }}>Sign in</Link>
       <Link href="/signup?role=company" className="btn-gold" style={{ padding: '8px 16px', fontSize: 13 }}>I&apos;m hiring</Link>

@@ -27,13 +27,52 @@ export async function updateCompanyProfile(formData: FormData) {
   const name = String(formData.get('name') || '').trim();
   const description = String(formData.get('description') || '').trim();
   const logoUrl = String(formData.get('logoUrl') || '').trim();
+  const tagline = String(formData.get('tagline') || '').trim();
+  const industry = String(formData.get('industry') || '').trim();
+  const companySize = String(formData.get('companySize') || '').trim();
+  const headquarters = String(formData.get('headquarters') || '').trim();
+  const websiteUrlRaw = String(formData.get('websiteUrl') || '').trim();
+  const coverUrl = String(formData.get('coverUrl') || '').trim();
+  const foundedYearRaw = String(formData.get('foundedYear') || '').trim();
+  const photosRaw = String(formData.get('photos') || '[]');
 
   if (!name) return { error: 'Company name is required.' };
+
+  let websiteUrl = '';
+  if (websiteUrlRaw) {
+    websiteUrl = /^https?:\/\//i.test(websiteUrlRaw) ? websiteUrlRaw : `https://${websiteUrlRaw}`;
+    try { new URL(websiteUrl); } catch { return { error: 'Enter a valid website address.' }; }
+  }
+
+  let foundedYear: number | null = null;
+  if (foundedYearRaw) {
+    const n = Number(foundedYearRaw);
+    const currentYear = new Date().getFullYear();
+    if (!Number.isInteger(n) || n < 1800 || n > currentYear) {
+      return { error: `Founded year must be between 1800 and ${currentYear}.` };
+    }
+    foundedYear = n;
+  }
+
+  let photos: string[] = [];
+  try { photos = JSON.parse(photosRaw); } catch { photos = []; }
 
   const admin = createAdminClient();
   const { error } = await admin
     .from('companies')
-    .update({ name, description, logo_url: logoUrl || null })
+    .update({
+      name,
+      description,
+      logo_url: logoUrl || null,
+      tagline: tagline || null,
+      industry: industry || null,
+      company_size: companySize || null,
+      headquarters: headquarters || null,
+      website_url: websiteUrl || null,
+      cover_url: coverUrl || null,
+      founded_year: foundedYear,
+      photos,
+    })
     .eq('id', membership.company_id);
   if (error) {
     console.error('updateCompanyProfile failed:', error);

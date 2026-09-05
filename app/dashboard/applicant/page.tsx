@@ -18,7 +18,7 @@ export default async function ApplicantDashboard({ searchParams }: { searchParam
 
   let query = supabase
     .from('jobs')
-    .select('id, title, category, location, pay_range, description, status, closes_at')
+    .select('id, title, category, location, pay_range, description, status, closes_at, company_id, companies(name)')
     .eq('status', 'open')
     .or(`closes_at.is.null,closes_at.gte.${new Date().toISOString().slice(0, 10)}`)
     .order('created_at', { ascending: false });
@@ -124,10 +124,15 @@ export default async function ApplicantDashboard({ searchParams }: { searchParam
         <div className="card" style={{ textAlign: 'center', color: 'var(--slate)' }}>No open roles match this search right now.</div>
       )}
 
-      {jobs?.map((job) => (
+      {jobs?.map((job: any) => (
         <div key={job.id} className="card">
           <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
             <div>
+              {job.companies?.name && job.company_id && (
+                <Link href={`/companies/${job.company_id}`} style={{ fontSize: 12, color: 'var(--gold)', fontWeight: 600, display: 'inline-block', marginBottom: 2 }}>
+                  {job.companies.name}
+                </Link>
+              )}
               <div style={{ fontWeight: 600 }}>{job.title}</div>
               <div style={{ fontSize: 13, color: 'var(--slate)' }}>{job.location} · {job.pay_range || 'Pay not listed'}</div>
             </div>
