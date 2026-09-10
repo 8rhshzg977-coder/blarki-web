@@ -63,3 +63,4 @@ cp .env.local.example .env.local   # then fill in the real values
 npm run dev
 ```
 Open http://localhost:3000
+<!-- deployment test: forcing a fresh commit to verify the webhook reconnect -->
